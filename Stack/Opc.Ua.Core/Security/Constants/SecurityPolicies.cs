@@ -55,8 +55,8 @@ namespace Opc.Ua
         /// <summary>
         /// The URI for the ECEDH_nistP256 security policy.
         /// </summary>
-        public const string Aes128_Sha256_ECEDH_nistP256 = BaseUri + "Aes128_Sha256_ECEDH_nistP256";
-        // public const string Aes128_Sha256_ECEDH_nistP256 = BaseUri + "Aes256_Sha256_EccP256";
+        public const string Aes256_Sha256_EccP256 = BaseUri + "Aes256_Sha256_EccP256";
+        // public const string Aes256_Sha256_EccP256 = BaseUri + "Aes256_Sha256_EccP256";
         #endregion
 
         #region Static Methods
@@ -155,9 +155,9 @@ namespace Opc.Ua
                     break;
                 }
 
-                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                case SecurityPolicies.Aes256_Sha256_EccP256:
                 {
-                    encryptedData.Algorithm = SecurityAlgorithms.Aes128_Sha256_ECEDH_nistP256;
+                    encryptedData.Algorithm = SecurityAlgorithms.Aes256_Sha256_EccP256;
                     encryptedData.Data = EccUtils.Encrypt(plainText, certificate, EllipticCurves.nistP256);
                     break;
                 }
@@ -220,9 +220,9 @@ namespace Opc.Ua
                     break;
                 }
 
-                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                case SecurityPolicies.Aes256_Sha256_EccP256:
                 {
-                    if (dataToDecrypt.Algorithm == SecurityAlgorithms.Aes128_Sha256_ECEDH_nistP256)
+                    if (dataToDecrypt.Algorithm == SecurityAlgorithms.Aes256_Sha256_EccP256)
                     {
                         return EccUtils.Decrypt(new ArraySegment<byte>(dataToDecrypt.Data), certificate, EllipticCurves.nistP256);
                     }
@@ -293,9 +293,9 @@ namespace Opc.Ua
                     break;
                 }
 
-                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                case SecurityPolicies.Aes256_Sha256_EccP256:
                 {
-                    signatureData.Algorithm = SecurityAlgorithms.Aes128_Sha256_ECEDH_nistP256;
+                    signatureData.Algorithm = SecurityAlgorithms.Aes256_Sha256_EccP256;
                     signatureData.Signature = EccUtils.Sign(new ArraySegment<byte>(dataToSign), certificate, EllipticCurves.nistP256);
                     break;
                 }
@@ -361,9 +361,9 @@ namespace Opc.Ua
                     break;
                 }
 
-                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                case SecurityPolicies.Aes256_Sha256_EccP256:
                 {
-                    if (signature.Algorithm == SecurityAlgorithms.Aes128_Sha256_ECEDH_nistP256)
+                    if (signature.Algorithm == SecurityAlgorithms.Aes256_Sha256_EccP256)
                     {
                         return EccUtils.Verify(new ArraySegment<byte>(dataToVerify), signature.Signature, certificate, EllipticCurves.nistP256);
                     }

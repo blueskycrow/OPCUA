@@ -106,7 +106,7 @@
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_ECEDH_nistP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
@@ -114,7 +114,7 @@
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_ECEDH_nistP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
       </ServerSecurityPolicy>
     </SecurityPolicies>
 

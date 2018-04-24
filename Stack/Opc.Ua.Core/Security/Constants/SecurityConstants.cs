@@ -112,7 +112,7 @@ namespace Opc.Ua
         /// <summary>
         /// The nistP256 Ellipic Curve with Empheral Keys and AES 128.
         /// </summary>        
-        public const string Aes128_Sha256_ECEDH_nistP256 = SecurityPolicies.Aes128_Sha256_ECEDH_nistP256;
+        public const string Aes256_Sha256_EccP256 = SecurityPolicies.Aes256_Sha256_EccP256;
     }
 
     /// <summary>

@@ -702,7 +702,7 @@ namespace Opc.Ua
                     return 0;
                 }
 
-                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                case SecurityPolicies.Aes256_Sha256_EccP256:
                 {
                     if (mode == MessageSecurityMode.Sign)
                     {
