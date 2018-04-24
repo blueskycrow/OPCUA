@@ -60,11 +60,15 @@ namespace Opc.Ua.Sample
                 application.LoadApplicationConfiguration(false).Wait();
 
                 // check the application certificate.
+                
+                // TBD - generate proper ECC certificates.
+                /*
                 bool certOK = application.CheckApplicationInstanceCertificate(false, 0).Result;
                 if (!certOK)
                 {
                     throw new Exception("Application instance certificate invalid!");
                 }
+                */
 
                 // start the server.
                 application.Start(new SampleServer()).Wait();

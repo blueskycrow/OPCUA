@@ -329,6 +329,7 @@ namespace Opc.Ua.Security
             profiles.Add(CreateProfile(SecurityPolicies.Basic128Rsa15));
             profiles.Add(CreateProfile(SecurityPolicies.Basic256));
             profiles.Add(CreateProfile(SecurityPolicies.Basic256Sha256));
+            profiles.Add(CreateProfile(SecurityPolicies.Aes128_Sha256_ECEDH_nistP256));
 
             if (policies != null)
             {
@@ -405,6 +406,12 @@ namespace Opc.Ua.Security
                     }
 
                     case SecurityPolicies.Basic256Sha256:
+                    {
+                        policy.SecurityMode = MessageSecurityMode.SignAndEncrypt;
+                        break;
+                    }
+
+                    case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
                     {
                         policy.SecurityMode = MessageSecurityMode.SignAndEncrypt;
                         break;

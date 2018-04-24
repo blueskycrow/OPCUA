@@ -10,6 +10,8 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+using System.Security.Cryptography;
+
 namespace Opc.Ua
 {    
     /// <summary>
@@ -106,6 +108,19 @@ namespace Opc.Ua
         /// The P-SHA1 algorithm used to generate keys.
         /// </summary>
         public const string PSha1 = "Psha1KeyDerivation";
+
+        /// <summary>
+        /// The nistP256 Ellipic Curve with Empheral Keys and AES 128.
+        /// </summary>        
+        public const string Aes128_Sha256_ECEDH_nistP256 = SecurityPolicies.Aes128_Sha256_ECEDH_nistP256;
+    }
+
+    /// <summary>
+    /// Defines constants for known elliptic curves.
+    /// </summary>
+    public static class EllipticCurves
+    {
+        public const string nistP256 = "nistP256";
     }
 
     /// <summary>

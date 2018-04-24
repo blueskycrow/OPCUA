@@ -146,7 +146,19 @@ namespace Opc.Ua.Bindings
         {
             if (disposing)
             {
-                // nothing to do.
+                #if NET47
+                if (m_localECDH != null)
+                {
+                    m_localECDH.Dispose();
+                    m_localECDH = null;
+                }
+
+                if (m_remoteECDH != null)
+                {
+                    m_remoteECDH.Dispose();
+                    m_remoteECDH = null;
+                }
+                #endif
             }
         }
         #endregion

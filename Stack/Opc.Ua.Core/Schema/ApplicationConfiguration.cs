@@ -702,6 +702,20 @@ namespace Opc.Ua
                     return 0;
                 }
 
+                case SecurityPolicies.Aes128_Sha256_ECEDH_nistP256:
+                {
+                    if (mode == MessageSecurityMode.Sign)
+                    {
+                        return 3;
+                    }
+                    if (mode == MessageSecurityMode.SignAndEncrypt)
+                    {
+                        return 6;
+                    }
+
+                    return 0;
+                }
+
                 default:
                 {
                     return 0;

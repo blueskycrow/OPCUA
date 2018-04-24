@@ -478,7 +478,7 @@ namespace Opc.Ua.Bindings
         {
             // create a new token.
             ChannelToken token = CreateToken();
-            token.ClientNonce = CreateNonce();
+            token.ClientNonce = CreateNonce(ClientCertificate);
 
             // construct the request.
             OpenSecureChannelRequest request = new OpenSecureChannelRequest();
@@ -599,6 +599,11 @@ namespace Opc.Ua.Bindings
                 m_requestedToken.TokenId = response.SecurityToken.TokenId;
                 m_requestedToken.Lifetime = (int)response.SecurityToken.RevisedLifetime;
                 m_requestedToken.ServerNonce = response.ServerNonce;
+
+                if (!ValidateNonce(ServerCertificate, response.ServerNonce))
+                {
+                    throw new ServiceResultException(StatusCodes.BadNonceInvalid);
+                }
 
                 string implementation = g_ImplementationString + 
                     m_socketFactory.Implementation + " " +

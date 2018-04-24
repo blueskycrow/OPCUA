@@ -5,7 +5,7 @@
   schemaLocation="./Schema/ApplicationConfiguration.xsd"
 >
   <!-- A human readable but not necessarily unique name for the application instance -->
-  <ApplicationName>UA Sample Client</ApplicationName>
+  <ApplicationName>UASampleClient</ApplicationName>
   
   <!-- A globally unique identifier for the application instance.
        This is overridden with the value contained in the application certificate. -->
@@ -22,17 +22,17 @@
     
     <!-- The location of the application instance certificate in the Windows certificate store -->
     <ApplicationCertificate>
-      <StoreType>X509Store</StoreType>
-      <StorePath>CurrentUser\UA_MachineDefault</StorePath>
+      <StoreType>Directory</StoreType>
+      <StorePath>..\..\..\..\..\PKI\own</StorePath>
 
       <!-- The subject for the certificate 
            Note that subject names are complex structures. Only text that appears here is treated as the CommonName component.
            The first certificate found is used if multiple certificates with the same CommonName and a matching hostname exist.
-           Also a complete distinguished name can be specified here: 'CN=UA Sample Client, DC=localhost'.
+           Also a complete distinguished name can be specified here: 'CN=UASampleClient, DC=localhost'.
            In this case the first certificate matching the complete distinguished name is used. localhost is replaced with the hostname.
            If no certificate is found, a new self signed application certificate is created.
            The Thumbprint should be specified if the CN or DN does not uniquely identify a certificate. -->
-      <SubjectName>CN=UA Sample Client, C=US, S=Arizona, O=OPC Foundation, DC=localhost</SubjectName>
+      <SubjectName>CN=UASampleClient, DC=localhost</SubjectName>
 
       <!-- The SHA1 thumbprint for the certificate.
            The thumbprint uniquely identifies a certificate.
@@ -53,7 +53,7 @@
          specify the certificate for each trusted certification authority. -->
     <TrustedIssuerCertificates>
       <StoreType>Directory</StoreType>
-      <StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\UA Certificate Authorities</StorePath>
+      <StorePath>..\..\..\..\..\PKI\issuers</StorePath>
     </TrustedIssuerCertificates>
     
     <!-- The list of trusted certificates. 
@@ -72,7 +72,7 @@
          -->
     <TrustedPeerCertificates>
       <StoreType>Directory</StoreType>
-      <StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\UA Applications</StorePath>
+      <StorePath>..\..\..\..\..\PKI\trusted</StorePath>
     </TrustedPeerCertificates>
     
     <!-- Applications exchange Nonces during the CreateSession. This value specifies the length. Must be >= 32 -->
@@ -81,7 +81,7 @@
     <!-- The directory used to store invalid certficates for later review by the administrator. -->
     <RejectedCertificateStore>
       <StoreType>Directory</StoreType>
-      <StorePath>%CommonApplicationData%\OPC Foundation\CertificateStores\RejectedCertificates</StorePath>
+      <StorePath>..\..\..\..\..\PKI\rejected</StorePath>
     </RejectedCertificateStore>
 
     <!-- Specifies whether the complete certificate chain should be sent for CA signed certificates. -->
@@ -170,18 +170,26 @@
          The first policy in the list is assigned to base address. -->
     <SecurityPolicies>
       <ServerSecurityPolicy>
-        <SecurityMode>SignAndEncrypt_3</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
-      </ServerSecurityPolicy>
-      <ServerSecurityPolicy>
-        <SecurityMode>Sign_2</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</SecurityPolicyUri>
-      </ServerSecurityPolicy>
-      <!--Removing no secuirty option from the configuration as this is a security risk
-        <ServerSecurityPolicy>
         <SecurityMode>None_1</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
-      </ServerSecurityPolicy>-->
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_ECEDH_nistP256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_ECEDH_nistP256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <!--
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15</SecurityPolicyUri>
@@ -198,6 +206,7 @@
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15</SecurityPolicyUri>
       </ServerSecurityPolicy>
+      -->
     </SecurityPolicies>
 
     <MinRequestThreadCount>5</MinRequestThreadCount>
@@ -309,7 +318,7 @@
     </RegistrationEndpoint>
 
     <!-- The maximum interval between registration. 0 disables periodic registration -->
-    <MaxRegistrationInterval>30000</MaxRegistrationInterval>
+    <MaxRegistrationInterval>0</MaxRegistrationInterval>
 
     <!-- The file used to save nodes added to the CoreNodeManager. If missing the CoreNodeManger will discard nodes when it stops. -->
     <NodeManagerSaveFile>Opc.Ua.Server.nodes.xml</NodeManagerSaveFile>

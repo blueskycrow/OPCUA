@@ -317,16 +317,33 @@ namespace Opc.Ua
 
                     FileInfo privateKeyFile = new FileInfo(filePath.ToString() + ".pfx");
                     password = password ?? String.Empty;
+
                     try
                     {
                         certificate = new X509Certificate2(
                             privateKeyFile.FullName,
                             password,
                             X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
-                        if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+
+                        if (certificate.GetRSAPrivateKey() != null)
                         {
+                            if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+                            {
+                                return certificate;
+                            }
+                        }
+
+                        #if NET47
+
+                        if (certificate.GetECDsaPrivateKey() != null)
+                        {
+                            // TBD - verify ECC keypair.
                             return certificate;
                         }
+
+                        #endif
+
+                        return certificate;
                     }
                     catch (Exception)
                     {
@@ -334,10 +351,24 @@ namespace Opc.Ua
                             privateKeyFile.FullName,
                             password,
                             X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                        if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+
+                        if (certificate.GetRSAPrivateKey() != null)
                         {
+                            if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+                            {
+                                return certificate;
+                            }
+                        }
+
+                        #if NET47
+
+                        if (certificate.GetECDsaPrivateKey() != null)
+                        {
+                            // TBD - verify ECC keypair.
                             return certificate;
                         }
+
+                        #endif
                     }
                 }
                 catch (Exception e)

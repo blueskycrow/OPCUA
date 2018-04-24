@@ -892,6 +892,7 @@ namespace Opc.Ua.Client.Controls
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Basic128Rsa15));
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Basic256));
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Basic256Sha256));
+                SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Aes128_Sha256_ECEDH_nistP256));
             }
 
             // find all unique security policies.    
