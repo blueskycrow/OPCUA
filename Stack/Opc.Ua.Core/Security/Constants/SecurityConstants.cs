@@ -110,9 +110,24 @@ namespace Opc.Ua
         public const string PSha1 = "Psha1KeyDerivation";
 
         /// <summary>
-        /// The nistP256 Ellipic Curve with Empheral Keys and AES 128.
+        /// The nistP256 Ellipic Curve signature with SHA256.
         /// </summary>        
-        public const string Aes256_Sha256_EccP256 = SecurityPolicies.Aes256_Sha256_EccP256;
+        public const string Ecdsa_Sha256_nistP256 =  SecurityPolicies.Aes128_Sha256_nistP256;
+
+        /// <summary>
+        /// The nistP384 Ellipic Curve signature with SHA384.
+        /// </summary>        
+        public const string Ecdsa_Sha384_nistP384 = SecurityPolicies.Aes256_Sha384_nistP384;
+
+        /// <summary>
+        /// The brainpoolP256r1 Ellipic Curve signature with SHA256.
+        /// </summary>        
+        public const string Ecdsa_Sha256_brainpoolP256r1 = SecurityPolicies.Aes128_Sha256_brainpoolP256r1;
+
+        /// <summary>
+        /// The brainpoolP384r1 Ellipic Curve signature with SHA384.
+        /// </summary>        
+        public const string Ecdsa_Sha384_brainpoolP384r1 = SecurityPolicies.Aes256_Sha384_brainpoolP384r1;
     }
 
     /// <summary>

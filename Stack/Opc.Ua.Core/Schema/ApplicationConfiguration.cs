@@ -702,15 +702,33 @@ namespace Opc.Ua
                     return 0;
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
                     if (mode == MessageSecurityMode.Sign)
                     {
-                        return 3;
+                        return 4;
                     }
+
                     if (mode == MessageSecurityMode.SignAndEncrypt)
                     {
-                        return 6;
+                        return 7;
+                    }
+
+                    return 0;
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    if (mode == MessageSecurityMode.Sign)
+                    {
+                        return 5;
+                    }
+
+                    if (mode == MessageSecurityMode.SignAndEncrypt)
+                    {
+                        return 8;
                     }
 
                     return 0;

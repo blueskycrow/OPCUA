@@ -5,7 +5,7 @@
   schemaLocation="./Schema/ApplicationConfiguration.xsd"
 >
   <ApplicationName>UASampleServer</ApplicationName>
-  <ApplicationUri>urn:localhost:OPCFoundation:SampleServer</ApplicationUri>
+  <ApplicationUri>urn:localhost:OPCFoundation:UASampleServer</ApplicationUri>
   <ProductUri>http://opcfoundation.org/UA/SampleServer</ProductUri>
   <ApplicationType>Server_0</ApplicationType>
 
@@ -15,7 +15,7 @@
     <ApplicationCertificate>
       <StoreType>Directory</StoreType>
       <StorePath>..\..\..\..\..\PKI\own</StorePath>
-      <SubjectName>CN=UASampleServer, DC=localhost</SubjectName>
+      <SubjectName>CN=UASampleServer-brainpoolP384r1, DC=localhost</SubjectName>
     </ApplicationCertificate>
 
     <!-- Where the issuer certificate are stored (certificate authorities) -->
@@ -82,7 +82,7 @@
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_nistP256</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
@@ -94,11 +94,35 @@
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_nistP256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_nistP256</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_nistP384</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_nistP384</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_brainpoolP256r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_brainpoolP256r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <!--Removing no security option from the configuration as this is a security risk
         <ServerSecurityPolicy>

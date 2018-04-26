@@ -97,6 +97,7 @@ namespace Opc.Ua
             try
             {
                 rsa = signingCertificate.GetRSAPublicKey();
+
                 if (rsa == null)
                 {
                     throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "No public key for certificate.");
@@ -108,7 +109,6 @@ namespace Opc.Ua
             {
                 RsaUtils.RSADispose(rsa);
             }
-
         }
 
         /// <summary>
@@ -426,57 +426,5 @@ namespace Opc.Ua
             }
         }
         #endregion
-    }
-
-
-    /// <summary>
-    /// Defines functions to implement ECC cryptography.
-    /// </summary>
-    public static class EccUtils
-    {
-        /// <summary>
-        /// Encrypts the data using ECC based encryption.
-        /// </summary>
-        public static byte[] Encrypt(
-            byte[] dataToEncrypt,
-            X509Certificate2 encryptingCertificate,
-            string curveName)
-        {
-            return dataToEncrypt;
-        }
-
-        /// <summary>
-        /// Encrypts the data using ECC based encryption.
-        /// </summary>
-        public static byte[] Decrypt(
-            ArraySegment<byte> dataToDecrypt,
-            X509Certificate2 encryptingCertificate,
-            string curveName)
-        {
-            return dataToDecrypt.Array;
-        }
-
-        /// <summary>
-        /// Computes an ECDSA signature.
-        /// </summary>
-        public static byte[] Sign(
-            ArraySegment<byte> dataToSign,
-            X509Certificate2 signingCertificate,
-            string curveName)
-        {
-            return new byte[0];
-        }
-
-        /// <summary>
-        /// Verifies an ECDSA signature.
-        /// </summary>
-        public static bool Verify(
-            ArraySegment<byte> dataToVerify,
-            byte[] signature,
-            X509Certificate2 signingCertificate,
-            string curveName)
-        {
-            return true;
-        }
     }
 }

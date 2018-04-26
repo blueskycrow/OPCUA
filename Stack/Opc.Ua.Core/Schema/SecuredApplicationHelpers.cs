@@ -325,11 +325,15 @@ namespace Opc.Ua.Security
         public static ListOfSecurityProfiles ToListOfSecurityProfiles(ServerSecurityPolicyCollection policies)
         {
             ListOfSecurityProfiles profiles = new ListOfSecurityProfiles();
+
             profiles.Add(CreateProfile(SecurityPolicies.None));
             profiles.Add(CreateProfile(SecurityPolicies.Basic128Rsa15));
             profiles.Add(CreateProfile(SecurityPolicies.Basic256));
             profiles.Add(CreateProfile(SecurityPolicies.Basic256Sha256));
-            profiles.Add(CreateProfile(SecurityPolicies.Aes256_Sha256_EccP256));
+            profiles.Add(CreateProfile(SecurityPolicies.Aes128_Sha256_nistP256));
+            profiles.Add(CreateProfile(SecurityPolicies.Aes256_Sha384_nistP384));
+            profiles.Add(CreateProfile(SecurityPolicies.Aes128_Sha256_brainpoolP256r1));
+            profiles.Add(CreateProfile(SecurityPolicies.Aes256_Sha384_brainpoolP384r1));
 
             if (policies != null)
             {
@@ -411,7 +415,10 @@ namespace Opc.Ua.Security
                         break;
                     }
 
-                    case SecurityPolicies.Aes256_Sha256_EccP256:
+                    case SecurityPolicies.Aes128_Sha256_nistP256:
+                    case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                    case SecurityPolicies.Aes256_Sha384_nistP384:
+                    case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                     {
                         policy.SecurityMode = MessageSecurityMode.SignAndEncrypt;
                         break;

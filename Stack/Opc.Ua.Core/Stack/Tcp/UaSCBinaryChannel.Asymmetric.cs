@@ -209,9 +209,16 @@ namespace Opc.Ua.Bindings
                     return 32;
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
                     return 64;
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    return 96;
                 }
 
                 default:
@@ -243,24 +250,14 @@ namespace Opc.Ua.Bindings
                     break;
                 }
 
-                #if NET47
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                    var parameters = certificate.GetECDsaPrivateKey().ExportParameters(false);
-                    m_localECDH = (ECDiffieHellmanCng)ECDiffieHellmanCng.Create(parameters.Curve);
-                    m_localECDH.KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hmac;
-                    m_localECDH.HashAlgorithm = CngAlgorithm.Sha256;
-            
-                    var senderNonce = new byte[m_localECDH.KeySize / 8];
-                    new RNGCryptoServiceProvider().GetBytes(senderNonce);
-                    m_localECDH.Seed = senderNonce;
-
-                    var data = m_localECDH.Key.Export(CngKeyBlobFormat.EccPublicBlob);
-                    senderNonce = new byte[data.Length - 8];
-                    Array.Copy(data, 8, senderNonce, 0, senderNonce.Length);
-                    return senderNonce;
+                    m_localNonce = Nonce.CreateNonce(SecurityPolicyUri, GetNonceLength());
+                    return m_localNonce.Data;
                 }
-                #endif
 
                 default:
                 case SecurityPolicies.None:
@@ -307,37 +304,14 @@ namespace Opc.Ua.Bindings
                     break;
                 }
 
-                #if NET47
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                    ECParameters parameters;
-
-                    using (ECDsa ecdsa = GetManualECDsaPublicKey(certificate))
-                    {
-                        parameters = ecdsa.ExportParameters(false);
-                    }
-
-                    int keyLength = (int)GetNonceLength();
-
-                    using (var ostrm = new System.IO.MemoryStream())
-                    {
-                        byte[] qx = new byte[keyLength/2];
-                        byte[] qy = new byte[keyLength/2];
-                        Buffer.BlockCopy(nonce, 0, qx, 0, keyLength/2);
-                        Buffer.BlockCopy(nonce, keyLength/2, qy, 0, keyLength/2);
-
-                        var ecdhParameters = new ECParameters
-                        {
-                            Curve = parameters.Curve,
-                            Q = { X = qx, Y = qy }
-                        };
-
-                         m_remoteECDH = (ECDiffieHellmanCng)ECDiffieHellman.Create(ecdhParameters);
-                    }
-
+                    m_remoteNonce = Nonce.CreateNonce(SecurityPolicyUri, nonce);
                     return true;
                 }
-                #endif
             }
 
             return false;
@@ -361,7 +335,10 @@ namespace Opc.Ua.Bindings
                     return RsaUtils.GetPlainTextBlockSize(receiverCertificate, false);
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     return 1;
                 }
@@ -391,8 +368,11 @@ namespace Opc.Ua.Bindings
                 {
                     return RsaUtils.GetCipherTextBlockSize(receiverCertificate, false);
                 }
-
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                    
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     return 1;
                 }
@@ -492,12 +472,15 @@ namespace Opc.Ua.Bindings
                 {
                     return RsaUtils.GetSignatureLength(senderCertificate);
                 }
-
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                    
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                    return 64;
+                    return EccUtils.GetSignatureLength(senderCertificate);
                 }
-
+ 
                 default:
                 case SecurityPolicies.None:
                 {
@@ -1201,9 +1184,17 @@ namespace Opc.Ua.Bindings
                     return RsaPkcs15_Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA256);
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
-                    return Ecdsa_Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA256);
+                    return EccUtils.Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA256);
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    return EccUtils.Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA384);
                 }
             }
         }
@@ -1240,9 +1231,16 @@ namespace Opc.Ua.Bindings
                     return RsaPkcs15_Verify(dataToVerify, signature, senderCertificate, HashAlgorithmName.SHA256);
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
-                    return Ecdsa_Verify(dataToVerify, signature, senderCertificate, HashAlgorithmName.SHA256);
+                    return EccUtils.Verify(dataToVerify, signature, senderCertificate, HashAlgorithmName.SHA256);
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    return EccUtils.Verify(dataToVerify, signature, senderCertificate, HashAlgorithmName.SHA384);
                 }
 
                 default:
@@ -1269,7 +1267,10 @@ namespace Opc.Ua.Bindings
             {
                 default:
                 case SecurityPolicies.None:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     byte[] encryptedBuffer = BufferManager.TakeBuffer(SendBufferSize, "Encrypt");
 
@@ -1308,7 +1309,10 @@ namespace Opc.Ua.Bindings
             {
                 default:
                 case SecurityPolicies.None:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     byte[] decryptedBuffer = BufferManager.TakeBuffer(SendBufferSize, "Decrypt");
 
@@ -1343,12 +1347,8 @@ namespace Opc.Ua.Bindings
         private X509Certificate2 m_clientCertificate;
         private X509Certificate2Collection m_clientCertificateChain;
         private bool m_uninitialized;
-
-        #if NET47
-        private ECDiffieHellmanCng m_localECDH;
-        private ECDiffieHellmanCng m_remoteECDH;
-        #endif
-
+        private Nonce m_localNonce;
+        private Nonce m_remoteNonce;
         #endregion
     }
 }

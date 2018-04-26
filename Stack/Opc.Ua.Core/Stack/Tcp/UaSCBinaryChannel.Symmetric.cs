@@ -147,10 +147,21 @@ namespace Opc.Ua.Bindings
                     break;
                 }
 
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
                     m_hmacHashSize = 32;
                     m_signatureKeySize = 32;
+                    m_encryptionKeySize = 16;
+                    m_encryptionBlockSize = 16;
+                    break;
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    m_hmacHashSize = 48;
+                    m_signatureKeySize = 48;
                     m_encryptionKeySize = 32;
                     m_encryptionBlockSize = 16;
                     break;
@@ -168,41 +179,10 @@ namespace Opc.Ua.Bindings
             }
         }
 
-        private void DeriveKeys(byte[] secret, byte[] seed, ChannelToken token, bool isServer)
+        private void DeriveKeysWithPSHA256(byte[] secret, byte[] seed, ChannelToken token, bool isServer)
         {
-            //Console.WriteLine("NET: Secret: {0}", FormatHexString(secret));
-            //Console.WriteLine("NET: Seed: {0}", FormatHexString(seed));
-
-            HMACSHA256 hmac = new HMACSHA256(secret);
-
-            byte[] keySeed = hmac.ComputeHash(seed);
-            //Console.WriteLine("NET: A(1): {0}", FormatHexString(keySeed));
-
-            byte[] prfSeed = new byte[hmac.HashSize / 8 + seed.Length];
-            Buffer.BlockCopy(keySeed, 0, prfSeed, 0, keySeed.Length);
-            Buffer.BlockCopy(seed, 0, prfSeed, keySeed.Length, seed.Length);
-            //Console.WriteLine("NET: S(1): {0}", FormatHexString(prfSeed));
-
-            // create buffer with requested size.
             int length = m_signatureKeySize + m_encryptionKeySize + m_encryptionBlockSize;
-            byte[] output = new byte[length];
-
-            int position = 0;
-
-            do
-            {
-                byte[] hash = hmac.ComputeHash(prfSeed);
-                //Console.WriteLine("NET: R(1): {0}", FormatHexString(hash));
-
-                for (int ii = 0; position < length && ii < hash.Length; ii++)
-                {
-                    output[position++] = hash[ii];
-                }
-
-                keySeed = hmac.ComputeHash(keySeed);
-                Buffer.BlockCopy(keySeed, 0, prfSeed, 0, keySeed.Length);
-            }
-            while (position < length);
+            var output = Utils.PSHA256(secret, null, seed, 0, length);
 
             var signingKey = new byte[m_signatureKeySize];
             var encryptingKey = new byte[m_encryptionKeySize];
@@ -210,7 +190,7 @@ namespace Opc.Ua.Bindings
 
             Buffer.BlockCopy(output, 0, signingKey, 0, signingKey.Length);
             Buffer.BlockCopy(output, m_signatureKeySize, encryptingKey, 0, encryptingKey.Length);
-            Buffer.BlockCopy(output, m_signatureKeySize + m_encryptionBlockSize, iv, 0, iv.Length);
+            Buffer.BlockCopy(output, m_signatureKeySize + m_encryptionKeySize, iv, 0, iv.Length);
 
             if (isServer)
             {
@@ -236,31 +216,42 @@ namespace Opc.Ua.Bindings
                 return;
             }
 
-            if (SecurityPolicyUri == SecurityPolicies.Basic256Sha256)
+            bool usePSHA1 = false;
+            byte[] serverSecret = token.ServerNonce;
+            byte[] clientSecret = token.ClientNonce;
+
+            switch (SecurityPolicyUri)
             {
-                token.ClientSigningKey = Utils.PSHA256(token.ServerNonce, null, token.ClientNonce, 0, m_signatureKeySize);
-                token.ClientEncryptingKey = Utils.PSHA256(token.ServerNonce, null, token.ClientNonce, m_signatureKeySize, m_encryptionKeySize);
-                token.ClientInitializationVector = Utils.PSHA256(token.ServerNonce, null, token.ClientNonce, m_signatureKeySize + m_encryptionKeySize, m_encryptionBlockSize);
-                token.ServerSigningKey = Utils.PSHA256(token.ClientNonce, null, token.ServerNonce, 0, m_signatureKeySize);
-                token.ServerEncryptingKey = Utils.PSHA256(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize, m_encryptionKeySize);
-                token.ServerInitializationVector = Utils.PSHA256(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize + m_encryptionKeySize, m_encryptionBlockSize);
+                default:
+                {
+                    break;
+                }
+
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                {
+                    clientSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "client", HashAlgorithmName.SHA256);
+                    serverSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "server", HashAlgorithmName.SHA256);
+                    break;
+                }  
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    clientSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "client", HashAlgorithmName.SHA384);
+                    serverSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "server", HashAlgorithmName.SHA384);
+                    break;
+                }
+
+                case SecurityPolicies.Basic128Rsa15:
+                case SecurityPolicies.Basic256:
+                {
+                    usePSHA1 = true;
+                    break;
+                }
             }
 
-            #if NET47
-            if (SecurityPolicyUri == SecurityPolicies.Aes256_Sha256_EccP256)
-            {
-                var nonce = new UTF8Encoding().GetBytes("client");
-                var clientSecret = m_localECDH.DeriveKeyFromHmac(m_remoteECDH.PublicKey, HashAlgorithmName.SHA256, null, nonce, null);
-
-                nonce = new UTF8Encoding().GetBytes("server");
-                var serverSecret = m_localECDH.DeriveKeyFromHmac(m_remoteECDH.PublicKey, HashAlgorithmName.SHA256, null, nonce, null);
-
-                DeriveKeys(clientSecret, serverSecret, token, false);
-                DeriveKeys(serverSecret, clientSecret, token, true);
-            }
-            #endif
-
-            else
+            if (usePSHA1)
             {
                 token.ClientSigningKey = Utils.PSHA1(token.ServerNonce, null, token.ClientNonce, 0, m_signatureKeySize);
                 token.ClientEncryptingKey = Utils.PSHA1(token.ServerNonce, null, token.ClientNonce, m_signatureKeySize, m_encryptionKeySize);
@@ -269,13 +260,21 @@ namespace Opc.Ua.Bindings
                 token.ServerEncryptingKey = Utils.PSHA1(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize, m_encryptionKeySize);
                 token.ServerInitializationVector = Utils.PSHA1(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize + m_encryptionKeySize, m_encryptionBlockSize);
             }
+            else
+            {
+                DeriveKeysWithPSHA256(serverSecret, clientSecret, token, false);
+                DeriveKeysWithPSHA256(clientSecret, serverSecret, token, true);
+            }
 
             switch (SecurityPolicyUri)
             {
                 case SecurityPolicies.Basic128Rsa15:
                 case SecurityPolicies.Basic256:
                 case SecurityPolicies.Basic256Sha256:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     // create encryptors. 
                     SymmetricAlgorithm AesCbcEncryptorProvider = Aes.Create();
@@ -291,19 +290,6 @@ namespace Opc.Ua.Bindings
                     AesCbcDecryptorProvider.Key = token.ServerEncryptingKey;
                     AesCbcDecryptorProvider.IV = token.ServerInitializationVector;
                     token.ServerEncryptor = AesCbcDecryptorProvider;
-
-                    // create HMACs.
-                    if (SecurityPolicyUri == SecurityPolicies.Basic256Sha256 || SecurityPolicyUri == SecurityPolicies.Aes256_Sha256_EccP256)
-                    {
-                        // SHA256
-                        token.ServerHmac = new HMACSHA256(token.ServerSigningKey);
-                        token.ClientHmac = new HMACSHA256(token.ClientSigningKey);
-                    }
-                    else
-                    {   // SHA1
-                        token.ServerHmac = new HMACSHA1(token.ServerSigningKey);
-                        token.ClientHmac = new HMACSHA1(token.ClientSigningKey);
-                    }
                     break;
                 }
 
@@ -312,7 +298,41 @@ namespace Opc.Ua.Bindings
                 {
                     break;
                 }
-            }            
+            }
+            
+            switch (SecurityPolicyUri)
+            {
+                case SecurityPolicies.Basic128Rsa15:
+                case SecurityPolicies.Basic256:           
+                {
+                    token.ServerHmac = new HMACSHA1(token.ServerSigningKey);
+                    token.ClientHmac = new HMACSHA1(token.ClientSigningKey);
+                    break;
+                }
+
+                case SecurityPolicies.Basic256Sha256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                {
+                    token.ServerHmac = new HMACSHA256(token.ServerSigningKey);
+                    token.ClientHmac = new HMACSHA256(token.ClientSigningKey);
+                    break;
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    token.ServerHmac = new HMACSHA384(token.ServerSigningKey);
+                    token.ClientHmac = new HMACSHA384(token.ClientSigningKey);
+                    break;
+                }
+
+                default:
+                case SecurityPolicies.None:             
+                {
+                    break;
+                }
+            }
         }
         
         /// <summary>
@@ -664,9 +684,12 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Basic128Rsa15:
                 case SecurityPolicies.Basic256:
                 case SecurityPolicies.Basic256Sha256:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                        return SymmetricSign(token, dataToSign, useClientKeys);
+                    return SymmetricSign(token, dataToSign, useClientKeys);
                 }
             }
         }
@@ -691,9 +714,12 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Basic128Rsa15:
                 case SecurityPolicies.Basic256:
                 case SecurityPolicies.Basic256Sha256:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                        return SymmetricVerify(token, signature, dataToVerify, useClientKeys);
+                    return SymmetricVerify(token, signature, dataToVerify, useClientKeys);
                 }
 
                 default:
@@ -719,7 +745,10 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Basic256:
                 case SecurityPolicies.Basic256Sha256:
                 case SecurityPolicies.Basic128Rsa15:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     SymmetricEncrypt(token, dataToEncrypt, useClientKeys);
                     break;
@@ -743,7 +772,10 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Basic256:
                 case SecurityPolicies.Basic256Sha256:
                 case SecurityPolicies.Basic128Rsa15:
-                case SecurityPolicies.Aes256_Sha256_EccP256:
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     SymmetricDecrypt(token, dataToDecrypt, useClientKeys);
                     break;

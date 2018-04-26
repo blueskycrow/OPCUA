@@ -9,7 +9,7 @@
   
   <!-- A globally unique identifier for the application instance.
        This is overridden with the value contained in the application certificate. -->
-  <ApplicationUri>urn:localhost:OPCFoundation:SampleClient</ApplicationUri>
+  <ApplicationUri>urn:localhost:OPCFoundation:UASampleClient</ApplicationUri>
   
   <!-- A globally unique URI for the product (usually assigned by the product vendor) -->
   <ProductUri>http://opcfoundation.org/UA/SampleClient/</ProductUri>
@@ -32,7 +32,7 @@
            In this case the first certificate matching the complete distinguished name is used. localhost is replaced with the hostname.
            If no certificate is found, a new self signed application certificate is created.
            The Thumbprint should be specified if the CN or DN does not uniquely identify a certificate. -->
-      <SubjectName>CN=UASampleClient, DC=localhost</SubjectName>
+      <SubjectName>UASampleClient-brainpoolP384r1</SubjectName>
 
       <!-- The SHA1 thumbprint for the certificate.
            The thumbprint uniquely identifies a certificate.
@@ -175,11 +175,35 @@
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>Sign_2</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_nistP256</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_EccP256</SecurityPolicyUri>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_nistP256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_nistP384</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_nistP384</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_brainpoolP256r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_brainpoolP256r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <!--
       <ServerSecurityPolicy>
