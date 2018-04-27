@@ -179,30 +179,34 @@ namespace Opc.Ua.Bindings
             }
         }
 
-        private void DeriveKeysWithPSHA256(byte[] secret, byte[] seed, ChannelToken token, bool isServer)
+        private void DeriveKeysWithPSHA(HashAlgorithmName algorithmName, byte[] secret, byte[] seed, ChannelToken token, bool isServer)
         {
             int length = m_signatureKeySize + m_encryptionKeySize + m_encryptionBlockSize;
-            var output = Utils.PSHA256(secret, null, seed, 0, length);
 
-            var signingKey = new byte[m_signatureKeySize];
-            var encryptingKey = new byte[m_encryptionKeySize];
-            var iv = new byte[m_encryptionBlockSize];
-
-            Buffer.BlockCopy(output, 0, signingKey, 0, signingKey.Length);
-            Buffer.BlockCopy(output, m_signatureKeySize, encryptingKey, 0, encryptingKey.Length);
-            Buffer.BlockCopy(output, m_signatureKeySize + m_encryptionKeySize, iv, 0, iv.Length);
-
-            if (isServer)
+            using (var hmac = Utils.CreateHMAC(algorithmName, secret))
             {
-                token.ServerSigningKey = signingKey;
-                token.ServerEncryptingKey = encryptingKey;
-                token.ServerInitializationVector = iv;
-            }
-            else
-            {
-                token.ClientSigningKey = signingKey;
-                token.ClientEncryptingKey = encryptingKey;
-                token.ClientInitializationVector = iv;
+                var output = Utils.PSHA(hmac, null, seed, 0, length);
+
+                var signingKey = new byte[m_signatureKeySize];
+                var encryptingKey = new byte[m_encryptionKeySize];
+                var iv = new byte[m_encryptionBlockSize];
+
+                Buffer.BlockCopy(output, 0, signingKey, 0, signingKey.Length);
+                Buffer.BlockCopy(output, m_signatureKeySize, encryptingKey, 0, encryptingKey.Length);
+                Buffer.BlockCopy(output, m_signatureKeySize + m_encryptionKeySize, iv, 0, iv.Length);
+
+                if (isServer)
+                {
+                    token.ServerSigningKey = signingKey;
+                    token.ServerEncryptingKey = encryptingKey;
+                    token.ServerInitializationVector = iv;
+                }
+                else
+                {
+                    token.ClientSigningKey = signingKey;
+                    token.ClientEncryptingKey = encryptingKey;
+                    token.ClientInitializationVector = iv;
+                }
             }
         }
 
@@ -216,9 +220,9 @@ namespace Opc.Ua.Bindings
                 return;
             }
 
-            bool usePSHA1 = false;
             byte[] serverSecret = token.ServerNonce;
             byte[] clientSecret = token.ClientNonce;
+            HashAlgorithmName algorithmName = HashAlgorithmName.SHA256;
 
             switch (SecurityPolicyUri)
             {
@@ -240,31 +244,20 @@ namespace Opc.Ua.Bindings
                 {
                     clientSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "client", HashAlgorithmName.SHA384);
                     serverSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "server", HashAlgorithmName.SHA384);
+                    algorithmName = HashAlgorithmName.SHA384;
                     break;
                 }
 
                 case SecurityPolicies.Basic128Rsa15:
                 case SecurityPolicies.Basic256:
                 {
-                    usePSHA1 = true;
+                    algorithmName = HashAlgorithmName.SHA1;
                     break;
                 }
             }
 
-            if (usePSHA1)
-            {
-                token.ClientSigningKey = Utils.PSHA1(token.ServerNonce, null, token.ClientNonce, 0, m_signatureKeySize);
-                token.ClientEncryptingKey = Utils.PSHA1(token.ServerNonce, null, token.ClientNonce, m_signatureKeySize, m_encryptionKeySize);
-                token.ClientInitializationVector = Utils.PSHA1(token.ServerNonce, null, token.ClientNonce, m_signatureKeySize + m_encryptionKeySize, m_encryptionBlockSize);
-                token.ServerSigningKey = Utils.PSHA1(token.ClientNonce, null, token.ServerNonce, 0, m_signatureKeySize);
-                token.ServerEncryptingKey = Utils.PSHA1(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize, m_encryptionKeySize);
-                token.ServerInitializationVector = Utils.PSHA1(token.ClientNonce, null, token.ServerNonce, m_signatureKeySize + m_encryptionKeySize, m_encryptionBlockSize);
-            }
-            else
-            {
-                DeriveKeysWithPSHA256(serverSecret, clientSecret, token, false);
-                DeriveKeysWithPSHA256(clientSecret, serverSecret, token, true);
-            }
+            DeriveKeysWithPSHA(algorithmName, serverSecret, clientSecret, token, false);
+            DeriveKeysWithPSHA(algorithmName, clientSecret, serverSecret, token, true);
 
             switch (SecurityPolicyUri)
             {

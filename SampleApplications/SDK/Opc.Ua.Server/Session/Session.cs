@@ -1040,7 +1040,7 @@ namespace Opc.Ua.Server
 
                 try
                 {
-                    token.Decrypt(m_serverCertificate, m_serverNonce.Data, securityPolicyUri);
+                    token.Decrypt(m_serverCertificate, m_serverNonce, securityPolicyUri);
                 }
                 catch (Exception e)
                 {

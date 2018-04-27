@@ -32,7 +32,7 @@
            In this case the first certificate matching the complete distinguished name is used. localhost is replaced with the hostname.
            If no certificate is found, a new self signed application certificate is created.
            The Thumbprint should be specified if the CN or DN does not uniquely identify a certificate. -->
-      <SubjectName>UASampleClient-brainpoolP384r1</SubjectName>
+      <SubjectName>UASampleClient-nistP384</SubjectName>
 
       <!-- The SHA1 thumbprint for the certificate.
            The thumbprint uniquely identifies a certificate.
@@ -248,16 +248,13 @@
       <!-- Allows username/password -->
       <ua:UserTokenPolicy>
         <ua:TokenType>UserName_1</ua:TokenType>          
-        <!-- passwords must be encrypted - this specifies what algorithm to use -->
-        <ua:SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</ua:SecurityPolicyUri>
       </ua:UserTokenPolicy>
 
       <!-- Allows user certificates -->
       <ua:UserTokenPolicy>
         <ua:TokenType>Certificate_2</ua:TokenType>
-        <!-- certificate possession must be proven with a digital signature - this specifies what algorithm to use -->
-        <ua:SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</ua:SecurityPolicyUri>
       </ua:UserTokenPolicy>
+      
       <!--
       Issued tokens are any type of WS-Security compliant token
       This is a URN assigned by OASIS to SAML Security Tokens

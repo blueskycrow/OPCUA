@@ -103,7 +103,7 @@ namespace Opc.Ua
                 default:
                 {
                     algorithm = CngAlgorithm.Rsa;
-                    curve = ECCurve.NamedCurves.nistP256;
+                    curve = new ECCurve();
                     break;
                 }
             }
@@ -191,7 +191,26 @@ namespace Opc.Ua
     /// </summary>
     public static class EccUtils
     {
-        #if NET47
+        public static bool IsEccPolicy(string securityPolicyUri)
+        {
+            if (securityPolicyUri != null)
+            {
+                switch (securityPolicyUri)
+                {
+                    case SecurityPolicies.Aes128_Sha256_nistP256:
+                    case SecurityPolicies.Aes256_Sha384_nistP384:
+                    case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                    case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+#if NET47
         public static ECDsa GetPublicKey(X509Certificate2 certificate)
         {
             if (certificate == null || certificate.GetKeyAlgorithm() != "1.2.840.10045.2.1")
@@ -389,61 +408,38 @@ namespace Opc.Ua
     public class EncryptedSecret
     {
         public X509Certificate2 SenderCertificate { get; set; }
-    
+
         public Nonce SenderNonce { get; set; }
 
         public X509Certificate2 RecipientCertificate { get; set; }
 
         public Nonce RecipientNonce { get; set; }
 
-        public byte[] Secret { get; set; }
-
-        public byte[] Encrypt(string securityPolicyUri)
+        private byte[] EncryptSecret(
+            byte[] secret,
+            byte[] nonce,
+            byte[] encryptingKey,
+            byte[] iv)
         {
-            BinaryEncoder encoder = new BinaryEncoder(ServiceMessageContext.GlobalContext);
+            byte[] dataToEncrypt = null;
 
-            encoder.WriteNodeId(null, new NodeId(100000));
-            encoder.WriteByte(null, (byte)ExtensionObjectEncoding.Binary);
-
-            int lengthPosition = encoder.Position;
-            encoder.WriteUInt32(null, 0);
-            encoder.WriteString(null, securityPolicyUri);
-            encoder.WriteByteString(null, RecipientNonce.Data);
-            encoder.WriteDateTime(null, DateTime.UtcNow);
-            encoder.WriteUInt16(null, (ushort)SenderNonce.Data.Length);
-            encoder.WriteByteString(null, SenderNonce.Data);
-
-            int signingKeySize = 32;
-            int encryptingKeySize = 32;
-            int blockSize = 16;
-
-            var secret = SenderNonce.DeriveKeyFromHmac(RecipientNonce, String.Empty, HashAlgorithmName.SHA256);
-
-            var encoder2 = new BinaryEncoder(ServiceMessageContext.GlobalContext);
-
-            encoder2.WriteByteString(null, SenderNonce.Data);
-            encoder2.WriteByteString(null, Secret);
-
-            ushort paddingSize = (ushort)((encoder2.Position + 2) % blockSize);
-
-            for (int ii = 0; ii < paddingSize; ii++)
+            using (var encoder = new BinaryEncoder(ServiceMessageContext.GlobalContext))
             {
-                encoder2.WriteByte(null, (byte)(paddingSize & 0xFF));
+                encoder.WriteByteString(null, nonce);
+                encoder.WriteByteString(null, secret);
+
+                int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
+                paddingSize %= iv.Length;
+
+                for (int ii = 0; ii < paddingSize; ii++)
+                {
+                    encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
+                }
+
+                encoder.WriteUInt16(null, (ushort)paddingSize);
+
+                dataToEncrypt = encoder.CloseAndReturnBuffer();
             }
-
-            encoder2.WriteUInt16(null, paddingSize);
-
-            var dataToEncrypt = encoder2.CloseAndReturnBuffer();
-
-            var keyData = Utils.PSHA256(secret, null, null, 0, signingKeySize + encryptingKeySize + blockSize);
-
-            var signingKey = new byte[signingKeySize];
-            var encryptingKey = new byte[encryptingKeySize];
-            var iv = new byte[blockSize];
-
-            Buffer.BlockCopy(keyData, 0, signingKey, 0, signingKey.Length);
-            Buffer.BlockCopy(keyData, signingKeySize, encryptingKey, 0, encryptingKey.Length);
-            Buffer.BlockCopy(keyData, signingKeySize + encryptingKeySize, iv, 0, iv.Length);
 
             using (Aes aes = Aes.Create())
             {
@@ -461,39 +457,416 @@ namespace Opc.Ua
 
                     encryptor.TransformBlock(dataToEncrypt, 0, dataToEncrypt.Length, dataToEncrypt, 0);
                 }
+            }
 
-                for (int ii = 0; ii < dataToEncrypt.Length; ii++)
-                {
-                    encoder.WriteByte(null, dataToEncrypt[ii]);
-                }
+            return dataToEncrypt;
+        }
 
-                for (int ii = 0; ii < signingKeySize; ii++)
+        private byte[] DecryptSecret(
+            byte[] dataToDecrypt,
+            int offset,
+            int count,
+            byte[] nonce,
+            byte[] encryptingKey,
+            byte[] iv)
+        {
+            using (Aes aes = Aes.Create())
+            {
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.None;
+                aes.Key = encryptingKey;
+                aes.IV = iv;
+
+                using (ICryptoTransform decryptor = aes.CreateDecryptor())
                 {
-                    encoder.WriteByte(null, 0);
+                    if (count % decryptor.InputBlockSize != 0)
+                    {
+                        throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "Input data is not an even number of encryption blocks.");
+                    }
+
+                    decryptor.TransformBlock(dataToDecrypt, offset, count, dataToDecrypt, offset);
                 }
             }
 
-            var dataToSign = encoder.CloseAndReturnBuffer();
+            byte[] receivedNonce = null;
+            byte[] secret = null;
+
+            using (var decoder = new BinaryDecoder(dataToDecrypt, offset, count, ServiceMessageContext.GlobalContext))
+            {
+                receivedNonce = decoder.ReadByteString(null);
+                secret = decoder.ReadByteString(null);
+            }
+
+            int notvalid = (receivedNonce.Length == nonce.Length) ? 0 : 1;
+
+            for (int ii = 0; ii < nonce.Length && ii < receivedNonce.Length; ii++)
+            {
+                notvalid |= receivedNonce[ii] ^ nonce[ii];
+            }
+
+            ushort paddingSize = dataToDecrypt[offset + count - 1];
+            paddingSize <<= 8;
+            paddingSize += dataToDecrypt[offset + count - 2];
+
+            notvalid |= (count - nonce.Length - paddingSize - 8 >= 0) ? 0 : 1;
+
+            int start = offset + count - paddingSize - 2;
+
+            for (int ii = 0; ii < count - 2 && ii < paddingSize; ii++)
+            {
+                notvalid |= dataToDecrypt[start + ii] ^ (paddingSize & 0xFF);
+            }
+
+            if (notvalid != 0)
+            {
+                throw new ServiceResultException(StatusCodes.BadNonceInvalid);
+            }
+
+            return secret;
+        }
+
+        private byte[] CreateKeysForRsa(
+            string securityPolicyUri,
+            X509Certificate2 certificate,
+            out byte[] signingKey,
+            out byte[] encryptingKey,
+            out byte[] iv)
+        {
+            uint signingKeySize = 32;
+            uint encryptingKeySize = 32;
+            uint blockSize = 16;
+            var algorithmName = HashAlgorithmName.SHA256;
+
+            byte[] plainText = null;
+
+            using (BinaryEncoder encoder = new BinaryEncoder(ServiceMessageContext.GlobalContext))
+            {
+                signingKey = Utils.Nonce.CreateNonce(signingKeySize);
+                encoder.WriteByteString(null, signingKey);
+
+                encryptingKey = Utils.Nonce.CreateNonce(encryptingKeySize);
+                encoder.WriteByteString(null, encryptingKey);
+
+                iv = Utils.Nonce.CreateNonce(blockSize);
+                encoder.WriteByteString(null, iv);
+
+                plainText = encoder.CloseAndReturnBuffer();
+            }
+
+            byte[] cipherText = null;
+
+            using (var rsa = certificate.GetRSAPublicKey())
+            {
+                cipherText = rsa.Encrypt(plainText, RSAEncryptionPadding.OaepSHA256);
+            }
+
+            return cipherText;
+        }
+
+        private void ExtractKeysForRsa(
+            string securityPolicyUri,
+            X509Certificate2 certificate,
+            byte[] policyHeader,
+            out byte[] signingKey,
+            out byte[] encryptingKey,
+            out byte[] iv,
+            out HashAlgorithmName algorithmName)
+        {
+            int signingKeySize = 32;
+            int encryptingKeySize = 32;
+            int blockSize = 16;
+            algorithmName = HashAlgorithmName.SHA256;
+
+            byte[] plainText = null;
+
+            using (var rsa = certificate.GetRSAPrivateKey())
+            {
+                plainText = rsa.Decrypt(policyHeader, RSAEncryptionPadding.OaepSHA256);
+            }
+
+            using (BinaryDecoder decoder = new BinaryDecoder(plainText, 0, plainText.Length, ServiceMessageContext.GlobalContext))
+            {
+                signingKey = decoder.ReadByteString(null);
+                encryptingKey = decoder.ReadByteString(null);
+                iv = decoder.ReadByteString(null);
+            }
+
+            if (signingKey.Length != signingKeySize)
+            {
+                throw new ServiceResultException(StatusCodes.BadDecodingError);
+            }
+
+            if (encryptingKey.Length != encryptingKeySize)
+            {
+                throw new ServiceResultException(StatusCodes.BadDecodingError);
+            }
+
+            if (iv.Length != blockSize)
+            {
+                throw new ServiceResultException(StatusCodes.BadDecodingError);
+            }
+        }
+
+        private void CreateKeysForEcc(
+            string securityPolicyUri,
+            Nonce localNonce,
+            Nonce remoteNonce,
+            out byte[] signingKey,
+            out byte[] encryptingKey,
+            out byte[] iv,
+            out HashAlgorithmName algorithmName)
+        {
+            int signingKeySize = 32;
+            int encryptingKeySize = 32;
+            int blockSize = 16;
+            algorithmName = HashAlgorithmName.SHA256;
+
+            switch (securityPolicyUri)
+            {
+                case SecurityPolicies.Aes128_Sha256_nistP256:
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                {
+                    signingKeySize = 32;
+                    encryptingKeySize = 16;
+                    break;
+                }
+
+                case SecurityPolicies.Aes256_Sha384_nistP384:
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                {
+                    signingKeySize = 48;
+                    encryptingKeySize = 32;
+                    algorithmName = HashAlgorithmName.SHA384;
+                    break;
+                }
+            }
+
+            signingKey = new byte[signingKeySize];
+            encryptingKey = new byte[encryptingKeySize];
+            iv = new byte[blockSize];
+            
+            var sharedSecret = localNonce.DeriveKeyFromHmac(remoteNonce, "EncryptedSecret", algorithmName);
+
+            using (var hmac = Utils.CreateHMAC(algorithmName, signingKey))
+            {
+                var keyData = Utils.PSHA(hmac, null, sharedSecret, 0, signingKeySize + encryptingKeySize + blockSize);
+
+                Buffer.BlockCopy(keyData, 0, signingKey, 0, signingKey.Length);
+                Buffer.BlockCopy(keyData, signingKeySize, encryptingKey, 0, encryptingKey.Length);
+                Buffer.BlockCopy(keyData, signingKeySize + encryptingKeySize, iv, 0, iv.Length);
+            }
+        }
+
+        public byte[] Encrypt(string securityPolicyUri, byte[] secret)
+        {
+            byte[] signingKey = null;
+            byte[] encryptingKey = null;
+            byte[] iv = null;
+            byte[] dataToSign = null;
+            int lengthPosition = 0;
+            HashAlgorithmName algorithmName;
+
+            using (BinaryEncoder encoder = new BinaryEncoder(ServiceMessageContext.GlobalContext))
+            {
+                // write header.
+                encoder.WriteNodeId(null, new NodeId(100000));
+                encoder.WriteByte(null, (byte)ExtensionObjectEncoding.Binary);
+
+                lengthPosition = encoder.Position;
+                encoder.WriteUInt32(null, 0);
+
+                encoder.WriteString(null, securityPolicyUri);
+                encoder.WriteByteString(null, RecipientNonce.Data);
+                encoder.WriteDateTime(null, DateTime.UtcNow);
+
+                var senderNonce = SenderNonce.Data;
+                encoder.WriteUInt16(null, (ushort)senderNonce.Length);
+                
+                for (int ii = 0; ii < senderNonce.Length; ii++)
+                {
+                    encoder.WriteByte(null, senderNonce[ii]);
+                }
+
+                // create keys.
+                CreateKeysForEcc(securityPolicyUri, SenderNonce, RecipientNonce, out signingKey, out encryptingKey, out iv, out algorithmName);
+
+                // encrypt  secret,
+                var encryptedData = EncryptSecret(secret, RecipientNonce.Data, encryptingKey, iv);
+
+                // append encrypted secret.
+                for (int ii = 0; ii < encryptedData.Length; ii++)
+                {
+                    encoder.WriteByte(null, encryptedData[ii]);
+                }
+
+                // save space for signature.
+                for (int ii = 0; ii < signingKey.Length; ii++)
+                {
+                    encoder.WriteByte(null, 0);
+                }
+
+                dataToSign = encoder.CloseAndReturnBuffer();
+            }
 
             dataToSign[lengthPosition++] = (byte)(dataToSign.Length & 0xFF);
-            dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF00)>>8);
+            dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF00) >> 8);
             dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF0000) >> 16);
             dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF000000) >> 24);
 
-            using (var hmac = new HMACSHA256(signingKey))
+            using (var hmac = Utils.CreateHMAC(algorithmName, signingKey))
             {
-                using (var istrm = new MemoryStream(dataToSign, 0, dataToSign.Length, false))
+                using (var istrm = new MemoryStream(dataToSign, 0, dataToSign.Length - signingKey.Length, false))
                 {
                     byte[] signature = hmac.ComputeHash(istrm);
 
-                    for (int ii = dataToSign.Length - signingKeySize; ii < dataToSign.Length; ii++)
+                    for (int ii = 0; ii < signingKey.Length; ii++)
                     {
-                        dataToSign[ii] = signature[dataToSign.Length - signingKeySize + ii];
+                        dataToSign[dataToSign.Length - signingKey.Length + ii] = signature[ii];
                     }
                 }
             }
 
             return dataToSign;
+        }
+
+        private byte[] DecryptHeader(
+            BinaryDecoder decoder,
+            NodeId expectedTypeId,
+            int expectedLength,
+            string securityPolicyUri,
+            DateTime earliestTime,
+            byte[] recipientIdentifier)
+        {
+            var typeId = decoder.ReadNodeId(null);
+
+            if (!NodeId.IsNull(expectedTypeId) && typeId != expectedTypeId)
+            {
+                throw new ServiceResultException(StatusCodes.BadDataTypeIdUnknown);
+            }
+
+            var encoding = (ExtensionObjectEncoding)decoder.ReadByte(null);
+
+            if (encoding != ExtensionObjectEncoding.Binary)
+            {
+                throw new ServiceResultException(StatusCodes.BadDataEncodingUnsupported);
+            }
+
+            var length = decoder.ReadUInt32(null);
+
+            if (expectedLength > 0 && length != expectedLength)
+            {
+                throw new ServiceResultException(StatusCodes.BadDecodingError);
+            }
+
+            var actualSecurityPolicyUri = decoder.ReadString(null);
+
+            if (securityPolicyUri != actualSecurityPolicyUri)
+            {
+                throw new ServiceResultException(StatusCodes.BadSecurityPolicyRejected);
+            }
+
+            var identifier = decoder.ReadByteString(null);
+
+            if (recipientIdentifier.Length != identifier.Length)
+            {
+                throw new ServiceResultException(StatusCodes.BadNonceInvalid);
+            }
+
+            for (int ii = 0; ii < identifier.Length; ii++)
+            {
+                if (recipientIdentifier[ii] != identifier[ii])
+                {
+                    throw new ServiceResultException(StatusCodes.BadNonceInvalid);
+                }
+            }
+
+            var timestamp = decoder.ReadDateTime(null);
+
+            if (earliestTime != DateTime.MinValue && earliestTime > timestamp)
+            {
+                throw new ServiceResultException(StatusCodes.BadInvalidTimestamp);
+            }
+
+            var headerLength = decoder.ReadUInt16(null);
+
+            if (headerLength > expectedLength - decoder.Position)
+            {
+                throw new ServiceResultException(StatusCodes.BadDecodingError);
+            }
+
+            var header = new byte[headerLength];
+
+            for (int ii = 0; ii < header.Length; ii++)
+            {
+                header[ii] = decoder.ReadByte(null);
+            }
+
+            return header;
+
+        }
+
+        public byte[] Decrypt(string securityPolicyUri, DateTime earliestTime, byte[] dataToDecrypt, int offset, int count)
+        {
+            byte[] signingKey = null;
+            byte[] encryptingKey = null;
+            byte[] iv = null;
+            byte[] secret = null;
+            HashAlgorithmName algorithmName;
+
+            using (BinaryDecoder decoder = new BinaryDecoder(dataToDecrypt, offset, count, ServiceMessageContext.GlobalContext))
+            {
+                bool isEcc = EccUtils.IsEccPolicy(securityPolicyUri);
+
+                byte[] recipientIdentifier = Utils.FromHexString(RecipientCertificate.Thumbprint);
+
+                if (isEcc)
+                {
+                    recipientIdentifier = RecipientNonce.Data;
+                }
+                else
+                {
+                    recipientIdentifier = Utils.FromHexString(RecipientCertificate.Thumbprint);
+                }
+
+                var policyHeader = DecryptHeader(decoder, null, count, securityPolicyUri, earliestTime, recipientIdentifier);
+
+                if (isEcc)
+                {
+                    SenderNonce = Nonce.CreateNonce(securityPolicyUri, policyHeader);
+                    CreateKeysForEcc(securityPolicyUri, RecipientNonce, SenderNonce, out signingKey, out encryptingKey, out iv, out algorithmName);
+                }
+                else
+                {
+                    ExtractKeysForRsa(securityPolicyUri, RecipientCertificate, policyHeader, out signingKey, out encryptingKey, out iv, out algorithmName);
+                }
+                
+                // create keys.
+                using (var hmac = Utils.CreateHMAC(algorithmName, signingKey))
+                {
+                    using (var istrm = new MemoryStream(dataToDecrypt, offset, count - signingKey.Length, false))
+                    {
+                        byte[] signature = hmac.ComputeHash(istrm);
+
+                        int notvalid = 0;
+
+                        for (int ii = 0; ii < signingKey.Length; ii++)
+                        {
+                            notvalid |= dataToDecrypt[offset + count - signingKey.Length + ii] ^ signature[ii];
+                        }
+
+                        if (notvalid != 0)
+                        {
+                            throw new ServiceResultException(StatusCodes.BadUserSignatureInvalid);
+                        }
+                    }
+                }
+                
+                // decrypt secret.
+                var localNonce = RecipientNonce.Data;
+                secret = DecryptSecret(dataToDecrypt, decoder.Position, (int)(count - signingKey.Length - decoder.Position), localNonce, encryptingKey, iv);
+            }
+            
+            return secret;
         }
     }
 }

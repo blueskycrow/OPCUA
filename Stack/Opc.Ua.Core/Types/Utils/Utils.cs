@@ -2625,9 +2625,12 @@ namespace Opc.Ua
         public static byte[] PSHA1(byte[] secret, string label, byte[] data, int offset, int length)
         {
             if (secret == null) throw new ArgumentNullException("secret");
+
             // create the hmac.
-            HMACSHA1 hmac = new HMACSHA1(secret);
-            return PSHA(hmac, label, data, offset, length);
+            using (HMACSHA1 hmac = new HMACSHA1(secret))
+            {
+                return PSHA(hmac, label, data, offset, length);
+            }
         }
 
         /// <summary>
@@ -2636,15 +2639,41 @@ namespace Opc.Ua
         public static byte[] PSHA256(byte[] secret, string label, byte[] data, int offset, int length)
         {
             if (secret == null) throw new ArgumentNullException("secret");
+
             // create the hmac.
-            HMACSHA256 hmac = new HMACSHA256(secret);
-            return PSHA(hmac, label, data, offset, length);
+            using (HMACSHA256 hmac = new HMACSHA256(secret))
+            {
+                return PSHA(hmac, label, data, offset, length);
+            }
+        }
+
+        /// <summary>
+        /// Creates an HMAC.
+        /// </summary>
+        public static HMAC CreateHMAC(HashAlgorithmName algorithmName, byte[] secret)
+        {
+            if (algorithmName == HashAlgorithmName.SHA256)
+            {
+                return new HMACSHA256(secret);
+            }
+
+            if (algorithmName == HashAlgorithmName.SHA384)
+            {
+                return new HMACSHA384(secret);
+            }
+
+            if (algorithmName == HashAlgorithmName.SHA1)
+            {
+                return new HMACSHA1(secret);
+            }
+
+            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Generates a Pseudo random sequence of bits using the HMAC algorithm.
         /// </summary>
-        private static byte[] PSHA(HMAC hmac, string label, byte[] data, int offset, int length)
+        public static byte[] PSHA(HMAC hmac, string label, byte[] data, int offset, int length)
         {
             if (hmac == null) throw new ArgumentNullException("hmac");
             if (offset < 0) throw new ArgumentOutOfRangeException("offset");
