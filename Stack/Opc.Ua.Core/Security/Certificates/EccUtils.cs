@@ -644,12 +644,13 @@ namespace Opc.Ua
             signingKey = new byte[signingKeySize];
             encryptingKey = new byte[encryptingKeySize];
             iv = new byte[blockSize];
-            
-            var sharedSecret = localNonce.DeriveKeyFromHmac(remoteNonce, "EncryptedSecret", algorithmName);
 
-            using (var hmac = Utils.CreateHMAC(algorithmName, signingKey))
+            var clientSecret = localNonce.DeriveKeyFromHmac(remoteNonce, "client", algorithmName);
+            var serverSecret = localNonce.DeriveKeyFromHmac(remoteNonce, "server", algorithmName);
+
+            using (var hmac = Utils.CreateHMAC(algorithmName, clientSecret))
             {
-                var keyData = Utils.PSHA(hmac, null, sharedSecret, 0, signingKeySize + encryptingKeySize + blockSize);
+                var keyData = Utils.PSHA(hmac, null, serverSecret, 0, signingKeySize + encryptingKeySize + blockSize);
 
                 Buffer.BlockCopy(keyData, 0, signingKey, 0, signingKey.Length);
                 Buffer.BlockCopy(keyData, signingKeySize, encryptingKey, 0, encryptingKey.Length);
@@ -708,10 +709,12 @@ namespace Opc.Ua
                 dataToSign = encoder.CloseAndReturnBuffer();
             }
 
-            dataToSign[lengthPosition++] = (byte)(dataToSign.Length & 0xFF);
-            dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF00) >> 8);
-            dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF0000) >> 16);
-            dataToSign[lengthPosition++] = (byte)((dataToSign.Length & 0xFF000000) >> 24);
+            var length = dataToSign.Length - lengthPosition - 4;
+
+            dataToSign[lengthPosition++] = (byte)((length & 0xFF));
+            dataToSign[lengthPosition++] = (byte)((length & 0xFF00) >> 8);
+            dataToSign[lengthPosition++] = (byte)((length & 0xFF0000) >> 16);
+            dataToSign[lengthPosition++] = (byte)((length & 0xFF000000) >> 24);
 
             using (var hmac = Utils.CreateHMAC(algorithmName, signingKey))
             {
@@ -753,7 +756,7 @@ namespace Opc.Ua
 
             var length = decoder.ReadUInt32(null);
 
-            if (expectedLength > 0 && length != expectedLength)
+            if (expectedLength > 0 && length != expectedLength - decoder.Position)
             {
                 throw new ServiceResultException(StatusCodes.BadDecodingError);
             }
