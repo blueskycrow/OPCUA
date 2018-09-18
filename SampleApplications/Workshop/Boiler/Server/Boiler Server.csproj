@@ -73,13 +73,20 @@
     </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoilerServerConfiguration.cs" />
     <Compile Include="BoilerNodeManager.cs" />
     <Compile Include="BoilerServer.cs" />
+    <Compile Include="Opc.Ua.MTConnect.Classes.cs" />
+    <Compile Include="Opc.Ua.MTConnect.Constants.cs" />
+    <Compile Include="Opc.Ua.MTConnect.DataTypes.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Content Include="MTConnectModel.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -95,12 +102,18 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <Content Include="ModelDesign.csv" />
-    <Content Include="ModelDesign.xml" />
+    <Content Include="ModelDesign.xml">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="BoilerServer.Config.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>
     </Content>
     <Content Include="BuildDesign.bat" />
+    <EmbeddedResource Include="Opc.Ua.MTConnect.PredefinedNodes.uanodes" />
+    <None Include="Opc.Ua.MTConnect.Types.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

@@ -234,16 +234,16 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
-                    clientSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "client", HashAlgorithmName.SHA256);
-                    serverSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "server", HashAlgorithmName.SHA256);
+                    clientSecret = m_localNonce.DeriveKey(m_remoteNonce, "client", HashAlgorithmName.SHA256);
+                    serverSecret = m_localNonce.DeriveKey(m_remoteNonce, "server", HashAlgorithmName.SHA256);
                     break;
                 }  
 
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                    clientSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "client", HashAlgorithmName.SHA384);
-                    serverSecret = m_localNonce.DeriveKeyFromHmac(m_remoteNonce, "server", HashAlgorithmName.SHA384);
+                    clientSecret = m_localNonce.DeriveKey(m_remoteNonce, "client", HashAlgorithmName.SHA384);
+                    serverSecret = m_localNonce.DeriveKey(m_remoteNonce, "server", HashAlgorithmName.SHA384);
                     algorithmName = HashAlgorithmName.SHA384;
                     break;
                 }

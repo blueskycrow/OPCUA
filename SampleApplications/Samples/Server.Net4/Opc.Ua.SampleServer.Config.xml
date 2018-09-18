@@ -15,7 +15,7 @@
     <ApplicationCertificate>
       <StoreType>Directory</StoreType>
       <StorePath>..\..\..\..\..\PKI\own</StorePath>
-      <SubjectName>CN=UASampleServer-brainpoolP384r1, DC=localhost</SubjectName>
+      <SubjectName>CN=UASampleServer-nistP384, DC=REDSTONE</SubjectName>
     </ApplicationCertificate>
 
     <!-- Where the issuer certificate are stored (certificate authorities) -->
@@ -124,11 +124,10 @@
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
       </ServerSecurityPolicy>
-      <!--Removing no security option from the configuration as this is a security risk
-        <ServerSecurityPolicy>
+      <ServerSecurityPolicy>
         <SecurityMode>None_1</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
-      </ServerSecurityPolicy>-->
+      </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15</SecurityPolicyUri>
@@ -154,8 +153,6 @@
       <!-- Allows username/password -->
       <ua:UserTokenPolicy>
         <ua:TokenType>UserName_1</ua:TokenType>
-        <!-- passwords must be encrypted - this specifies what algorithm to use -->
-        <ua:SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</ua:SecurityPolicyUri>
       </ua:UserTokenPolicy>
 
       <!-- Allows user certificates -->
@@ -204,7 +201,7 @@
       <ua:UserIdentityTokens />
     </RegistrationEndpoint>
     
-    <MaxRegistrationInterval>30000</MaxRegistrationInterval>
+    <MaxRegistrationInterval>0</MaxRegistrationInterval>
     <NodeManagerSaveFile>Opc.Ua.Server.nodes.xml</NodeManagerSaveFile>
     <MinSubscriptionLifetime>10000</MinSubscriptionLifetime>
     <MaxPublishRequestCount>20</MaxPublishRequestCount>

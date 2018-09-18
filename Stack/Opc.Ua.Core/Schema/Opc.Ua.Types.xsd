@@ -1,33 +1,3 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!--
- * Copyright (c) 2005-2018 The OPC Foundation, Inc. All rights reserved.
- *
- * OPC Foundation MIT License 1.00
- * 
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- * 
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- * The complete license agreement can be found here:
- * http://opcfoundation.org/License/MIT/1.00/
--->
-
 <xs:schema
   xmlns:xs="http://www.w3.org/2001/XMLSchema"
   xmlns:ua="http://opcfoundation.org/UA/2008/02/Types.xsd"
@@ -535,6 +505,21 @@
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ListOfKeyValuePair" type="tns:ListOfKeyValuePair" nillable="true"></xs:element>
+
+  <xs:complexType name="AdditionalParametersType">
+    <xs:sequence>
+      <xs:element name="Parameters" type="tns:ListOfKeyValuePair" minOccurs="0" nillable="true" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="AdditionalParametersType" type="tns:AdditionalParametersType" />
+
+  <xs:complexType name="EphemeralKeyType">
+    <xs:sequence>
+      <xs:element name="PublicKey" type="xs:base64Binary" minOccurs="0" nillable="true" />
+      <xs:element name="Signature" type="xs:base64Binary" minOccurs="0" nillable="true" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="EphemeralKeyType" type="tns:EphemeralKeyType" />
 
   <xs:complexType name="EndpointType">
     <xs:sequence>
@@ -1618,6 +1603,7 @@
           <xs:element name="QueueName" type="xs:string" minOccurs="0" nillable="true" />
           <xs:element name="ResourceUri" type="xs:string" minOccurs="0" nillable="true" />
           <xs:element name="AuthenticationProfileUri" type="xs:string" minOccurs="0" nillable="true" />
+          <xs:element name="RequestedDeliveryGuarantee" type="tns:BrokerTransportQualityOfService" minOccurs="0" />
           <xs:element name="MetaDataQueueName" type="xs:string" minOccurs="0" nillable="true" />
           <xs:element name="MetaDataUpdateTime" type="xs:double" minOccurs="0" />
         </xs:sequence>
@@ -1726,6 +1712,12 @@
   </xs:simpleType>
   <xs:element name="NodeClass" type="tns:NodeClass" />
 
+  <xs:simpleType  name="PermissionType">
+    <xs:restriction base="xs:unsignedInt">
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="PermissionType" type="tns:PermissionType" />
+
   <xs:simpleType  name="AccessLevelType">
     <xs:restriction base="xs:unsignedByte">
     </xs:restriction>
@@ -1739,7 +1731,7 @@
   <xs:element name="AccessLevelExType" type="tns:AccessLevelExType" />
 
   <xs:simpleType  name="EventNotifierType">
-    <xs:restriction base="xs:unsignedInt">
+    <xs:restriction base="xs:unsignedByte">
     </xs:restriction>
   </xs:simpleType>
   <xs:element name="EventNotifierType" type="tns:EventNotifierType" />
@@ -1747,7 +1739,7 @@
   <xs:complexType name="RolePermissionType">
     <xs:sequence>
       <xs:element name="RoleId" type="ua:NodeId" minOccurs="0" nillable="true" />
-      <xs:element name="Permissions" type="xs:unsignedInt" minOccurs="0" />
+      <xs:element name="Permissions" type="tns:PermissionType" minOccurs="0" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="RolePermissionType" type="tns:RolePermissionType" />
@@ -2704,6 +2696,10 @@
     </xs:complexContent>
   </xs:complexType>
   <xs:element name="IssuedIdentityToken" type="tns:IssuedIdentityToken" />
+
+  <xs:element name="RsaEncryptedSecret" type="ua:Variant" />
+
+  <xs:element name="EccEncryptedSecret" type="ua:Variant" />
 
   <xs:complexType name="ActivateSessionRequest">
     <xs:annotation>

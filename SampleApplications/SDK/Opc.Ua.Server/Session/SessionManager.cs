@@ -265,11 +265,12 @@ namespace Opc.Ua.Server
             ExtensionObject userIdentityToken,
             SignatureData userTokenSignature,
             StringCollection localeIds,
-            out byte[] serverNonce)
+            out byte[] serverNonce,
+            out Session session)
         {
             serverNonce = null;
+            session = null;
 
-            Session session = null;
             UserIdentityToken newIdentity = null;
             UserTokenPolicy userTokenPolicy = null;
             Nonce serverNonceObject = null;

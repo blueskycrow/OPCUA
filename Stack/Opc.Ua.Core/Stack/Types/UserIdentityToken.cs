@@ -12,6 +12,7 @@
 
 using System;
 using System.Text;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Opc.Ua
@@ -25,7 +26,13 @@ namespace Opc.Ua
         /// <summary>
         /// Encrypts the token (implemented by the subclass).
         /// </summary>
-        public virtual void Encrypt(X509Certificate2 certificate, byte[] receiverNonce, string securityPolicyUri)
+        public virtual void Encrypt(
+            X509Certificate2 receiverCertificate,
+            byte[] receiverNonce, 
+            string securityPolicyUri, 
+            X509Certificate2 senderCertificate = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            Nonce receiverEphemeralKey = null)
         {
         }
 
@@ -36,13 +43,13 @@ namespace Opc.Ua
         [Obsolete("Use other overload.")]
         public virtual void Decrypt(X509Certificate2 certificate, byte[] receiverNonce, string securityPolicyUri)
         {
-            Decrypt(certificate, Nonce.CreateNonce(securityPolicyUri, receiverNonce), securityPolicyUri);
+            Decrypt(certificate, Nonce.CreateNonce(securityPolicyUri, receiverNonce), securityPolicyUri, null);
         }
 
         /// <summary>
         /// Decrypts the token (implemented by the subclass).
         /// </summary>
-        public virtual void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri)
+        public virtual void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
         {
         }
                 
@@ -84,7 +91,13 @@ namespace Opc.Ua
         /// <summary>
         /// Encrypts the DecryptedPassword using the EncryptionAlgorithm and places the result in Password
         /// </summary>
-        public override void Encrypt(X509Certificate2 certificate, byte[] receiverNonce, string securityPolicyUri)
+        public override void Encrypt(
+            X509Certificate2 receiverCertificate,
+            byte[] receiverNonce,
+            string securityPolicyUri,
+            X509Certificate2 senderCertificate  = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            Nonce receiverEphemeralKey = null)
         {
             if (m_decryptedPassword == null)
             {
@@ -106,7 +119,7 @@ namespace Opc.Ua
                 byte[] dataToEncrypt = Utils.Append(new UTF8Encoding().GetBytes(m_decryptedPassword), receiverNonce);
 
                 EncryptedData encryptedData = SecurityPolicies.Encrypt(
-                    certificate,
+                    receiverCertificate,
                     securityPolicyUri,
                     dataToEncrypt);
 
@@ -119,12 +132,32 @@ namespace Opc.Ua
             {
                 EncryptedSecret secret = new EncryptedSecret();
 
-                secret.RecipientCertificate = certificate;
-                secret.RecipientNonce = Nonce.CreateNonce(securityPolicyUri, receiverNonce);
+                secret.ReceiverCertificate = receiverCertificate;
+                secret.SecurityPolicyUri = securityPolicyUri;
+                secret.ReceiverNonce = receiverEphemeralKey;
+                secret.SenderCertificate = senderCertificate;
+
+                // check if the complete chain is included in the sender issuers.
+                if (senderIssuerCertificates != null && senderIssuerCertificates.Count > 0)
+                {
+                    if (senderIssuerCertificates[0].Thumbprint == senderCertificate.Thumbprint)
+                    {
+                        var issuers = new X509Certificate2Collection();
+
+                        for (int ii = 1; ii < senderIssuerCertificates.Count; ii++)
+                        {
+                            issuers.Add(senderIssuerCertificates[ii]);
+                        }
+
+                        senderIssuerCertificates = issuers;
+                    }
+                }
+
+                secret.SenderIssuerCertificates = senderIssuerCertificates;
                 secret.SenderNonce = Nonce.CreateNonce(securityPolicyUri, 0);
 
                 var utf8 = new UTF8Encoding(false).GetBytes(m_decryptedPassword);
-                m_password = secret.Encrypt(securityPolicyUri, utf8);
+                m_password = secret.Encrypt(utf8, receiverNonce);
                 m_encryptionAlgorithm = String.Empty;
             }
         }
@@ -132,7 +165,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
-        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri)
+        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)
@@ -188,10 +221,11 @@ namespace Opc.Ua
             {
                 EncryptedSecret secret = new EncryptedSecret();
 
-                secret.RecipientCertificate = certificate;
-                secret.RecipientNonce = receiverNonce;
+                secret.ReceiverCertificate = certificate;
+                secret.ReceiverNonce = ephemeralKey;
+                secret.SecurityPolicyUri = securityPolicyUri;
 
-                var plainText = secret.Decrypt(securityPolicyUri, DateTime.UtcNow.AddHours(-1), m_password, 0, m_password.Length);
+                var plainText = secret.Decrypt(DateTime.UtcNow.AddHours(-1), receiverNonce.Data, m_password, 0, m_password.Length);
                 m_decryptedPassword = new UTF8Encoding().GetString(plainText);
             }
         }
@@ -314,7 +348,13 @@ namespace Opc.Ua
         /// <summary>
         /// Encrypts the DecryptedTokenData using the EncryptionAlgorithm and places the result in Password
         /// </summary>
-        public override void Encrypt(X509Certificate2 certificate, byte[] receiverNonce, string securityPolicyUri)
+        public override void Encrypt(
+            X509Certificate2 receiverCertificate,
+            byte[] receiverNonce,
+            string securityPolicyUri,
+            X509Certificate2 senderCertificate = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            Nonce receiverEphemeralKey = null)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)
@@ -327,7 +367,7 @@ namespace Opc.Ua
             byte[] dataToEncrypt = Utils.Append(m_decryptedTokenData, receiverNonce);
 
             EncryptedData encryptedData = SecurityPolicies.Encrypt(
-                certificate,
+                receiverCertificate,
                 securityPolicyUri,
                 dataToEncrypt);
                         
@@ -338,7 +378,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
-        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri)
+        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)

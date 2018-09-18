@@ -441,6 +441,37 @@ namespace Opc.Ua.Server
             }
         }
 
+        public virtual void SetEccUserTokenSecurityPolicy(string securityPolicyUri)
+        {
+            lock (m_lock)
+            {
+                m_eccUserTokenSecurityPolicyUri = securityPolicyUri;
+                m_eccUserTokenNonce = null;
+            }
+        }
+
+        public virtual EphemeralKeyType GetNewEccKey()
+        {
+            lock (m_lock)
+            {
+                if (m_eccUserTokenSecurityPolicyUri == null)
+                {
+                    return null;
+                }
+
+                m_eccUserTokenNonce = Nonce.CreateNonce(m_eccUserTokenSecurityPolicyUri, 0);
+
+                EphemeralKeyType key = new EphemeralKeyType()
+                {
+                    PublicKey = m_eccUserTokenNonce.Data
+                };
+
+                key.Signature = EccUtils.Sign(new ArraySegment<byte>(key.PublicKey), m_serverCertificate, m_eccUserTokenSecurityPolicyUri);
+
+                return key;
+            }
+        }
+
         /// <summary>
         /// Validates the request.
         /// </summary>
@@ -1024,6 +1055,11 @@ namespace Opc.Ua.Server
                 securityPolicyUri = m_endpoint.SecurityPolicyUri;
             }
 
+            if (m_eccUserTokenSecurityPolicyUri != null && m_eccUserTokenSecurityPolicyUri != securityPolicyUri)
+            {
+                throw ServiceResultException.Create(StatusCodes.BadIdentityTokenInvalid, "Cannot change UserToken security policies when using ECC.");
+            }
+
             if (ServerBase.RequireEncryption(m_endpoint))
             {
                 // decrypt the token.
@@ -1040,7 +1076,7 @@ namespace Opc.Ua.Server
 
                 try
                 {
-                    token.Decrypt(m_serverCertificate, m_serverNonce, securityPolicyUri);
+                    token.Decrypt(m_serverCertificate, m_serverNonce, securityPolicyUri, m_eccUserTokenNonce);
                 }
                 catch (Exception e)
                 {
@@ -1224,6 +1260,8 @@ namespace Opc.Ua.Server
         private EndpointDescription m_endpoint;
         private X509Certificate2 m_serverCertificate;
         private byte[] m_serverCertificateChain;
+        private string m_eccUserTokenSecurityPolicyUri;
+        private Nonce m_eccUserTokenNonce;
 
         private string[] m_localeIds;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]

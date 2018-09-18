@@ -974,7 +974,17 @@ namespace Opc.Ua
                     if (String.IsNullOrEmpty(policy.SecurityPolicyUri))
                     {
                         UserTokenPolicy clone = (UserTokenPolicy)policy.MemberwiseClone();
-                        clone.SecurityPolicyUri = SecurityPolicies.Basic256;
+                        clone.SecurityPolicyUri = SecurityPolicies.Basic256Sha256;
+
+                        #if NET47
+                        var securityPolicyUris = EccUtils.GetSupportedSecurityPolicyUris(InstanceCertificate);
+
+                        if (securityPolicyUris != null && securityPolicyUris.Length > 0)
+                        {
+                            clone.SecurityPolicyUri = securityPolicyUris[0];
+                        }
+                        #endif
+                        
                         policies.Add(clone);
                         continue;
                     }

@@ -229,21 +229,21 @@ namespace Opc.Ua.Server
                 // check if not ready to publish.
                 if (!m_readyToPublish)
                 {
-                    Utils.Trace("IsReadyToPublish[{0}] FALSE", m_id);
+                    // Utils.Trace("IsReadyToPublish[{0}] FALSE", m_id);
                     return false;
                 }
 
                 // check if it has been triggered.
                 if (m_monitoringMode != MonitoringMode.Disabled && m_triggered)
                 {
-                    Utils.Trace("IsReadyToPublish[{0}] TRIGGERED", m_id);
+                    // Utils.Trace("IsReadyToPublish[{0}] TRIGGERED", m_id);
                     return true;
                 }
 
                 // check if monitoring was turned off.
                 if (m_monitoringMode != MonitoringMode.Reporting)
                 {
-                    Utils.Trace("IsReadyToPublish[{0}] FALSE", m_id);
+                    // Utils.Trace("IsReadyToPublish[{0}] FALSE", m_id);
                     return false;
                 }
 
@@ -259,7 +259,7 @@ namespace Opc.Ua.Server
                     }
                 }
 
-                Utils.Trace("IsReadyToPublish[{0}] NORMAL", m_id);
+                // Utils.Trace("IsReadyToPublish[{0}] NORMAL", m_id);
                 return true;
             }
         }

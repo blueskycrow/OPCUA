@@ -353,9 +353,9 @@ namespace Opc.Ua.Server
                                 !String.IsNullOrEmpty(clientDescription.ApplicationUri) &&
                                 certificateApplicationUri != clientDescription.ApplicationUri)
                             {
-                                throw ServiceResultException.Create(
-                                    StatusCodes.BadCertificateUriInvalid,
-                                    "The URI specified in the ApplicationDescription does not match the URI in the Certificate.");
+                                //throw ServiceResultException.Create(
+                                //    StatusCodes.BadCertificateUriInvalid,
+                                //    "The URI specified in the ApplicationDescription does not match the URI in the Certificate.");
                             }
 
                             CertificateValidator.Validate(clientCertificateChain);
@@ -398,8 +398,15 @@ namespace Opc.Ua.Server
                     out serverNonce,
                     out revisedSessionTimeout);
 
-                lock (m_lock)
+                var parameters = ExtensionObject.ToEncodeable(requestHeader.AdditionalHeader) as AdditionalParametersType;
+
+                if (parameters != null)
                 {
+                    parameters = CreateSessionProcessAdditionalParameters(session, parameters);
+                }
+
+                lock (m_lock)
+                { 
                     // return the application instance certificate for the server.
                     if (requireEncryption)
                     {
@@ -446,7 +453,14 @@ namespace Opc.Ua.Server
 
                 Utils.Trace("Server - SESSION CREATED. SessionId={0}", sessionId);
 
-                return CreateResponse(requestHeader, StatusCodes.Good);
+                var response = CreateResponse(requestHeader, StatusCodes.Good);
+
+                if (parameters != null)
+                {
+                    response.AdditionalHeader = new ExtensionObject(parameters);
+                }
+
+                return response;
             }
             catch (ServiceResultException e)
             {
@@ -470,6 +484,52 @@ namespace Opc.Ua.Server
             {
                 OnRequestComplete(context);
             }
+        }
+
+        protected virtual AdditionalParametersType CreateSessionProcessAdditionalParameters(Session session, AdditionalParametersType parameters)
+        {
+            AdditionalParametersType response = null;
+
+            if (parameters != null && parameters.Parameters != null)
+            {
+                response = new AdditionalParametersType();
+
+                foreach (var ii in parameters.Parameters)
+                {
+                    if (ii.Key == "ECDHPolicyUri")
+                    {
+                        var policyUri = ii.Value.ToString();
+
+                        if (EccUtils.IsEccPolicy(policyUri))
+                        {
+                            session.SetEccUserTokenSecurityPolicy(policyUri);
+                            var key = session.GetNewEccKey();
+                            response.Parameters.Add(new KeyValuePair() { Key = "ECDHKey", Value = new ExtensionObject(key) });
+                        }
+                        else
+                        {
+                            response.Parameters.Add(new KeyValuePair() { Key = "ECDHKey", Value = StatusCodes.BadSecurityPolicyRejected });
+                        }
+                    }
+                }
+            }
+
+            return response;
+        }
+
+        protected virtual AdditionalParametersType ActivateSessionProcessAdditionalParameters(Session session, AdditionalParametersType parameters)
+        {
+            AdditionalParametersType response = null;
+
+            var key = session.GetNewEccKey();
+
+            if (key != null)
+            {
+                response = new AdditionalParametersType();
+                response.Parameters.Add(new KeyValuePair() { Key = "ECDHKey", Value = new ExtensionObject(key) });
+            }
+
+            return response;
         }
 
         /// <summary>
@@ -563,6 +623,8 @@ namespace Opc.Ua.Server
                             
                 // check if certificates meet the server's requirements.
                 ValidateSoftwareCertificates(softwareCertificates);
+
+                Session session = null;
                 
                 // activate the session.
                 bool identityChanged = ServerInternal.SessionManager.ActivateSession(
@@ -573,16 +635,27 @@ namespace Opc.Ua.Server
                     userIdentityToken,
                     userTokenSignature,
                     localeIds,
-                    out serverNonce);
+                    out serverNonce,
+                    out session);
 
                 if (identityChanged)
                 {
                     // TBD - call Node Manager and Subscription Manager.
                 }
 
+                var parameters = ExtensionObject.ToEncodeable(requestHeader.AdditionalHeader) as AdditionalParametersType;
+                parameters = ActivateSessionProcessAdditionalParameters(session, parameters);
+     
                 Utils.Trace("Server - SESSION ACTIVATED.");
 
-                return CreateResponse(requestHeader, StatusCodes.Good);
+                var response = CreateResponse(requestHeader, StatusCodes.Good);
+
+                if (parameters != null)
+                {
+                    response.AdditionalHeader = new ExtensionObject(parameters);
+                }
+
+                return response;
             }
             catch (ServiceResultException e)
             {
