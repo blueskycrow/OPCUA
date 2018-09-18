@@ -1443,7 +1443,7 @@ namespace Opc.Ua.Bindings
         private TimerCallback m_StartHandshake;
         private AsyncCallback m_HandshakeComplete;
         private List<QueuedOperation> m_queuedOperations;
-        private string g_ImplementationString = ".NetStandard ServerChannel UA-TCP " + Utils.GetAssemblySoftwareVersion();
+        private string g_ImplementationString = ".NetStandard ClientChannel {0} " + Utils.GetAssemblyBuildNumber();
         #endregion
     }
 }

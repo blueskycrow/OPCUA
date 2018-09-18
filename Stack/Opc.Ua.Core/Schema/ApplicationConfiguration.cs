@@ -858,7 +858,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// The trusted certificate store.
+        /// The store containing any additional issuer certificates.
         /// </summary>
         [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 2)]
         public CertificateTrustList TrustedIssuerCertificates
@@ -880,7 +880,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// The store containing any additional issuer certificates.
+        /// The trusted certificate store.
         /// </summary>
         [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 4)]
         public CertificateTrustList TrustedPeerCertificates
@@ -983,7 +983,7 @@ namespace Opc.Ua
         /// <remarks>
         /// It is useful for client/server applications running on the same host  and sharing the cert store to autotrust.
         /// </remarks>
-        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 8)]
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 12)]
         public bool AddAppCertToTrustedStore
         {
             get { return m_addAppCertToTrustedStore; }
@@ -996,11 +996,99 @@ namespace Opc.Ua
         /// <remarks>
         /// If set to true the complete certificate chain will be sent for CA signed certificates.
         /// </remarks>
-        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 9)]
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 13)]
         public bool SendCertificateChain
         {
             get { return m_sendCertificateChain; }
             set { m_sendCertificateChain = value; }
+        }
+
+        /// <summary>
+        /// The store containing additional user issuer certificates.
+        /// </summary>
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 14)]
+        public CertificateTrustList UserIssuerCertificates
+        {
+            get
+            {
+                return m_userIssuerCertificates;
+            }
+
+            set
+            {
+                m_userIssuerCertificates = value;
+
+                if (m_userIssuerCertificates == null)
+                {
+                    m_userIssuerCertificates = new CertificateTrustList();
+                }
+            }
+        }
+
+        /// <summary>
+        /// The store containing trusted user certificates.
+        /// </summary>
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 15)]
+        public CertificateTrustList TrustedUserCertificates
+        {
+            get
+            {
+                return m_trustedUserCertificates;
+            }
+
+            set
+            {
+                m_trustedUserCertificates = value;
+
+                if (m_trustedUserCertificates == null)
+                {
+                    m_trustedUserCertificates = new CertificateTrustList();
+                }
+            }
+        }
+
+        /// <summary>
+        /// The store containing additional Https issuer certificates.
+        /// </summary>
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 16)]
+        public CertificateTrustList HttpsIssuerCertificates
+        {
+            get
+            {
+                return m_httpsIssuerCertificates;
+            }
+
+            set
+            {
+                m_httpsIssuerCertificates = value;
+
+                if (m_httpsIssuerCertificates == null)
+                {
+                    m_httpsIssuerCertificates = new CertificateTrustList();
+                }
+            }
+        }
+
+        /// <summary>
+        /// The store containing trusted Https certificates.
+        /// </summary>
+        [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 17)]
+        public CertificateTrustList TrustedHttpsCertificates
+        {
+            get
+            {
+                return m_trustedHttpsCertificates;
+            }
+
+            set
+            {
+                m_trustedHttpsCertificates = value;
+
+                if (m_trustedHttpsCertificates == null)
+                {
+                    m_trustedHttpsCertificates = new CertificateTrustList();
+                }
+            }
         }
         #endregion
 
@@ -1008,6 +1096,10 @@ namespace Opc.Ua
         private CertificateIdentifier m_applicationCertificate;
         private CertificateTrustList m_trustedIssuerCertificates;
         private CertificateTrustList m_trustedPeerCertificates;
+        private CertificateTrustList m_httpsIssuerCertificates;
+        private CertificateTrustList m_trustedHttpsCertificates;
+        private CertificateTrustList m_userIssuerCertificates;
+        private CertificateTrustList m_trustedUserCertificates;
         private int m_nonceLength;
         private CertificateStoreIdentifier m_rejectedCertificateStore;
         private bool m_autoAcceptUntrustedCertificates;
@@ -2281,7 +2373,6 @@ namespace Opc.Ua
         private void Initialize()
         {
             m_trustedCertificates = new CertificateIdentifierCollection();
-
         }
 
         /// <summary>

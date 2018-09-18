@@ -178,7 +178,6 @@ namespace Opc.Ua
             if (!EccUtils.IsEccPolicy(securityPolicyUri))
             {
                 EncryptedData encryptedData = new EncryptedData();
-
                 encryptedData.Data = m_password;
                 encryptedData.Algorithm = m_encryptionAlgorithm;
 
