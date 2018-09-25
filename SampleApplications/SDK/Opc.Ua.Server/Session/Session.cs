@@ -1076,7 +1076,7 @@ namespace Opc.Ua.Server
 
                 try
                 {
-                    token.Decrypt(m_serverCertificate, m_serverNonce, securityPolicyUri, m_eccUserTokenNonce);
+                    token.Decrypt(m_serverCertificate, m_serverNonce, securityPolicyUri, m_eccUserTokenNonce, m_clientCertificate, m_clientIssuerCertificates);
                 }
                 catch (Exception e)
                 {
@@ -1251,6 +1251,8 @@ namespace Opc.Ua.Server
         private bool m_activated;
         
         private X509Certificate2 m_clientCertificate;
+        private X509Certificate2Collection m_clientIssuerCertificates;
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
         private List<SoftwareCertificate> m_softwareCertificates;
         private byte[] m_clientNonce;

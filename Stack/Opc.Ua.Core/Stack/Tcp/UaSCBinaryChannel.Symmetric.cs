@@ -210,6 +210,37 @@ namespace Opc.Ua.Bindings
             }
         }
 
+        private void DeriveKeysWithHKDF(HashAlgorithmName algorithmName, byte[] salt, ChannelToken token, bool isServer)
+        {
+            int length = m_signatureKeySize + m_encryptionKeySize + m_encryptionBlockSize;
+
+            var output = m_localNonce.DeriveKey(m_remoteNonce, salt, algorithmName, length);
+
+            var signingKey = new byte[m_signatureKeySize];
+            var encryptingKey = new byte[m_encryptionKeySize];
+            var iv = new byte[m_encryptionBlockSize];
+
+            Buffer.BlockCopy(output, 0, signingKey, 0, signingKey.Length);
+            Buffer.BlockCopy(output, m_signatureKeySize, encryptingKey, 0, encryptingKey.Length);
+            Buffer.BlockCopy(output, m_signatureKeySize + m_encryptionKeySize, iv, 0, iv.Length);
+
+            if (isServer)
+            {
+                token.ServerSigningKey = signingKey;
+                token.ServerEncryptingKey = encryptingKey;
+                token.ServerInitializationVector = iv;
+            }
+            else
+            {
+                token.ClientSigningKey = signingKey;
+                token.ClientEncryptingKey = encryptingKey;
+                token.ClientInitializationVector = iv;
+            }
+        }
+
+        static readonly byte[] s_HkdfClientLabel = new UTF8Encoding().GetBytes("opcua-client");
+        static readonly byte[] s_HkdfServerLabel = new UTF8Encoding().GetBytes("opcua-server");
+
         /// <summary>
         /// Computes the keys for a token.
         /// </summary>
@@ -228,23 +259,26 @@ namespace Opc.Ua.Bindings
             {
                 default:
                 {
+                    DeriveKeysWithPSHA(algorithmName, serverSecret, clientSecret, token, false);
+                    DeriveKeysWithPSHA(algorithmName, clientSecret, serverSecret, token, true);
                     break;
                 }
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
-                    clientSecret = m_localNonce.DeriveKey(m_remoteNonce, "client", HashAlgorithmName.SHA256);
-                    serverSecret = m_localNonce.DeriveKey(m_remoteNonce, "server", HashAlgorithmName.SHA256);
+                    algorithmName = HashAlgorithmName.SHA256;
+                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfClientLabel, clientSecret, serverSecret), token, false);
+                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfServerLabel, serverSecret, clientSecret), token, true);
                     break;
                 }  
 
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
-                    clientSecret = m_localNonce.DeriveKey(m_remoteNonce, "client", HashAlgorithmName.SHA384);
-                    serverSecret = m_localNonce.DeriveKey(m_remoteNonce, "server", HashAlgorithmName.SHA384);
                     algorithmName = HashAlgorithmName.SHA384;
+                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfClientLabel, clientSecret, serverSecret), token, false);
+                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfServerLabel, serverSecret, clientSecret), token, true);
                     break;
                 }
 
@@ -252,12 +286,11 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Basic256:
                 {
                     algorithmName = HashAlgorithmName.SHA1;
+                    DeriveKeysWithPSHA(algorithmName, serverSecret, clientSecret, token, false);
+                    DeriveKeysWithPSHA(algorithmName, clientSecret, serverSecret, token, true);
                     break;
                 }
             }
-
-            DeriveKeysWithPSHA(algorithmName, serverSecret, clientSecret, token, false);
-            DeriveKeysWithPSHA(algorithmName, clientSecret, serverSecret, token, true);
 
             switch (SecurityPolicyUri)
             {

@@ -61,13 +61,47 @@ namespace Opc.Ua
 
         public byte[] Data { get; private set; }
 
-        public byte[] DeriveKey(Nonce remoteNonce, string label, HashAlgorithmName algorithm)
+        public byte[] DeriveKey(Nonce remoteNonce, byte[] salt, HashAlgorithmName algorithm, int length)
         {
             #if NET47
             if (m_ecdh != null)
             {
-                var nonce = new UTF8Encoding().GetBytes(label);
-                return m_ecdh.DeriveKeyFromHash(remoteNonce.m_ecdh.PublicKey, algorithm, nonce, null);
+                var secret = m_ecdh.DeriveKeyFromHmac(remoteNonce.m_ecdh.PublicKey, algorithm, salt, null, null);
+
+                byte[] output = new byte[length];
+
+                HMACSHA256 hmac = new HMACSHA256(secret);
+
+                byte counter = 1;
+
+                byte[] info = new byte[hmac.HashSize / 8 + salt.Length + 1];
+                Buffer.BlockCopy(salt, 0, info, 0, salt.Length);
+                info[salt.Length] = counter++;
+
+                byte[] hash = hmac.ComputeHash(info, 0, salt.Length + 1);
+
+                int pos = 0;
+
+                for (int ii = 0; ii < hash.Length && pos < length; ii++)
+                {
+                    output[pos++] = hash[ii];
+                }
+
+                while (pos < length)
+                {
+                    Buffer.BlockCopy(hash, 0, info, 0, hash.Length);
+                    Buffer.BlockCopy(salt, 0, info, hash.Length, salt.Length);
+                    info[info.Length - 1] = counter++;
+
+                    hash = hmac.ComputeHash(info, 0, info.Length);
+
+                    for (int ii = 0; ii < hash.Length && pos < length; ii++)
+                    {
+                        output[pos++] = hash[ii];
+                    }
+                }
+
+                return output;
             }
             #endif
 
@@ -500,6 +534,8 @@ namespace Opc.Ua
 
         public X509Certificate2Collection SenderIssuerCertificates { get; set; }
 
+        public bool DoNotEncodeSenderCertificate { get; set; }
+
         public Nonce SenderNonce { get; set; }
 
         public Nonce ReceiverNonce { get; set; }
@@ -591,6 +627,12 @@ namespace Opc.Ua
 
             for (int ii = 0; ii < count - 2 && ii < paddingSize; ii++)
             {
+                if (start < 0 || start + ii >= dataToDecrypt.Length)
+                {
+                    notvalid |= 1;
+                    continue;
+                }
+
                 notvalid |= dataToDecrypt[start + ii] ^ (paddingSize & 0xFF);
             }
 
@@ -602,10 +644,13 @@ namespace Opc.Ua
             return new ArraySegment<byte>(dataToDecrypt, offset, count - paddingSize);
         }
 
+        static readonly byte[] s_Label = new UTF8Encoding().GetBytes("opcua-secret");
+
         private void CreateKeysForEcc(
             string securityPolicyUri,
-            Nonce localNonce,
-            Nonce remoteNonce,
+            Nonce senderNonce,
+            Nonce receiverNonce,
+            bool forDecryption,
             out byte[] encryptingKey,
             out byte[] iv)
         {
@@ -634,16 +679,21 @@ namespace Opc.Ua
             encryptingKey = new byte[encryptingKeySize];
             iv = new byte[blockSize];
 
-            var senderNonce = localNonce.DeriveKey(remoteNonce, "sender", algorithmName);
-            var receiverNonce = localNonce.DeriveKey(remoteNonce, "receiver", algorithmName);
+            var seed = Utils.Append(s_Label, senderNonce.Data, receiverNonce.Data);
 
-            using (var hmac = Utils.CreateHMAC(algorithmName, senderNonce))
+            byte[] keyData = null;
+
+            if (forDecryption)
             {
-                var keyData = Utils.PSHA(hmac, null, receiverNonce, 0, encryptingKeySize + blockSize);
-
-                Buffer.BlockCopy(keyData, 0, encryptingKey, 0, encryptingKey.Length);
-                Buffer.BlockCopy(keyData, encryptingKeySize, iv, 0, iv.Length);
+                keyData = receiverNonce.DeriveKey(senderNonce, seed, algorithmName, encryptingKeySize + blockSize);
             }
+            else
+            {
+                keyData = senderNonce.DeriveKey(receiverNonce, seed, algorithmName, encryptingKeySize + blockSize);
+            }
+
+            Buffer.BlockCopy(keyData, 0, encryptingKey, 0, encryptingKey.Length);
+            Buffer.BlockCopy(keyData, encryptingKeySize, iv, 0, iv.Length);
         }
 
         public byte[] Encrypt(byte[] secret, byte[] nonce)
@@ -666,30 +716,35 @@ namespace Opc.Ua
 
                 encoder.WriteString(null, SecurityPolicyUri);
 
-                var senderCertificate = SenderCertificate.RawData;
+                byte[] senderCertificate = null;
 
-                if (SenderIssuerCertificates != null && SenderIssuerCertificates.Count > 0)
+                if (!DoNotEncodeSenderCertificate)
                 {
-                    int blobSize = senderCertificate.Length;
+                    senderCertificate = SenderCertificate.RawData;
 
-                    foreach (var issuer in SenderIssuerCertificates)
+                    if (SenderIssuerCertificates != null && SenderIssuerCertificates.Count > 0)
                     {
-                        blobSize += issuer.RawData.Length;
+                        int blobSize = senderCertificate.Length;
+
+                        foreach (var issuer in SenderIssuerCertificates)
+                        {
+                            blobSize += issuer.RawData.Length;
+                        }
+
+                        var blob = new byte[blobSize];
+                        Buffer.BlockCopy(senderCertificate, 0, blob, 0, senderCertificate.Length);
+
+                        int pos = senderCertificate.Length;
+
+                        foreach (var issuer in SenderIssuerCertificates)
+                        {
+                            var data = issuer.RawData;
+                            Buffer.BlockCopy(data, 0, blob, pos, data.Length);
+                            pos += data.Length;
+                        }
+
+                        senderCertificate = blob;
                     }
-
-                    var blob = new byte[blobSize];
-                    Buffer.BlockCopy(senderCertificate, 0, blob, 0, senderCertificate.Length);
-
-                    int pos = senderCertificate.Length;
-
-                    foreach (var issuer in SenderIssuerCertificates)
-                    {
-                        var data = issuer.RawData;
-                        Buffer.BlockCopy(data, 0, blob, pos, data.Length);
-                        pos += data.Length;
-                    }
-
-                    senderCertificate = blob;
                 }
 
                 encoder.WriteByteString(null, senderCertificate);
@@ -705,7 +760,7 @@ namespace Opc.Ua
                 // create keys.
                 if (EccUtils.IsEccPolicy(SecurityPolicyUri))
                 {
-                    CreateKeysForEcc(SecurityPolicyUri, SenderNonce, ReceiverNonce, out encryptingKey, out iv);
+                    CreateKeysForEcc(SecurityPolicyUri, SenderNonce, ReceiverNonce, false, out encryptingKey, out iv);
                 }
 
                 // encrypt  secret,
@@ -809,10 +864,10 @@ namespace Opc.Ua
                 {
                     case SecurityPolicies.Aes256_Sha384_nistP384:
                     case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
-                    {
-                        signatureAlgorithm = HashAlgorithmName.SHA384;
-                        break;
-                    }
+                        {
+                            signatureAlgorithm = HashAlgorithmName.SHA384;
+                            break;
+                        }
                 }
 
                 // extract the send certificate and any chain.
@@ -820,17 +875,28 @@ namespace Opc.Ua
 
                 if (senderCertificate == null || senderCertificate.Length == 0)
                 {
-                    throw new ServiceResultException(StatusCodes.BadCertificateInvalid);
+                    if (SenderCertificate == null)
+                    {
+                        throw new ServiceResultException(StatusCodes.BadCertificateInvalid);
+                    }
                 }
+                else
+                { 
+                    var senderCertificateChain = Utils.ParseCertificateChainBlob(senderCertificate);
 
-                var senderCertificateChain = Utils.ParseCertificateChainBlob(senderCertificate);
+                    SenderCertificate = senderCertificateChain[0];
+                    SenderIssuerCertificates = new X509Certificate2Collection();
 
-                SenderCertificate = senderCertificateChain[0];
-                SenderIssuerCertificates = new X509Certificate2Collection();
+                    for (int ii = 1; ii < senderCertificateChain.Count; ii++)
+                    {
+                        SenderIssuerCertificates.Add(senderCertificateChain[ii]);
+                    }
 
-                for (int ii = 1; ii < senderCertificateChain.Count; ii++)
-                {
-                    SenderIssuerCertificates.Add(senderCertificateChain[ii]);
+                    // validate the sender.
+                    if (Validator != null)
+                    {
+                        Validator.Validate(senderCertificateChain);
+                    }
                 }
 
                 // extract the send certificate and any chain.
@@ -865,12 +931,6 @@ namespace Opc.Ua
                 if (!Utils.IsEqual(receiverPublicKey, ReceiverNonce.Data))
                 { 
                     throw new ServiceResultException(StatusCodes.BadDecodingError, "Unexpected receiver nonce.");
-                }
-
-                // validate the sender.
-                if (Validator != null)
-                {
-                    Validator.Validate(senderCertificateChain);
                 }
 
                 // check the signature.
@@ -909,8 +969,8 @@ namespace Opc.Ua
 
             var dataToDecrypt = VerifyHeaderForEcc(new ArraySegment<byte>(data, offset, count), earliestTime);
 
-            CreateKeysForEcc(SecurityPolicyUri, ReceiverNonce, SenderNonce, out encryptingKey, out iv);
-
+            CreateKeysForEcc(SecurityPolicyUri, SenderNonce, ReceiverNonce, true, out encryptingKey, out iv);
+       
             var plainText = DecryptSecret(dataToDecrypt.Array, dataToDecrypt.Offset, dataToDecrypt.Count, encryptingKey, iv);
 
             using (BinaryDecoder decoder = new BinaryDecoder(plainText.Array, plainText.Offset, plainText.Count, ServiceMessageContext.GlobalContext))

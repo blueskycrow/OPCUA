@@ -107,6 +107,7 @@ namespace Opc.Ua.Bindings
             {
                 // get the encrypting key.
                 rsa = encryptingCertificate.GetRSAPublicKey();
+
                 if (rsa == null)
                 {
                     throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "No public key for certificate.");

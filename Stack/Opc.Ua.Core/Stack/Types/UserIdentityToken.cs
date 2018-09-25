@@ -29,10 +29,11 @@ namespace Opc.Ua
         public virtual void Encrypt(
             X509Certificate2 receiverCertificate,
             byte[] receiverNonce, 
-            string securityPolicyUri, 
+            string securityPolicyUri,
+            Nonce receiverEphemeralKey = null, 
             X509Certificate2 senderCertificate = null,
             X509Certificate2Collection senderIssuerCertificates = null,
-            Nonce receiverEphemeralKey = null)
+            bool doNotEncodeSenderCertificate = false)
         {
         }
 
@@ -49,7 +50,14 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the token (implemented by the subclass).
         /// </summary>
-        public virtual void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
+        public virtual void Decrypt(
+            X509Certificate2 certificate, 
+            Nonce receiverNonce, 
+            string securityPolicyUri,
+            Nonce ephemeralKey = null,
+            X509Certificate2 senderCertificate = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            CertificateValidator validator = null)
         {
         }
                 
@@ -95,9 +103,10 @@ namespace Opc.Ua
             X509Certificate2 receiverCertificate,
             byte[] receiverNonce,
             string securityPolicyUri,
+            Nonce receiverEphemeralKey = null,
             X509Certificate2 senderCertificate  = null,
             X509Certificate2Collection senderIssuerCertificates = null,
-            Nonce receiverEphemeralKey = null)
+            bool doNotEncodeSenderCertificate = false)
         {
             if (m_decryptedPassword == null)
             {
@@ -136,6 +145,8 @@ namespace Opc.Ua
                 secret.SecurityPolicyUri = securityPolicyUri;
                 secret.ReceiverNonce = receiverEphemeralKey;
                 secret.SenderCertificate = senderCertificate;
+                secret.SenderIssuerCertificates = senderIssuerCertificates;
+                secret.DoNotEncodeSenderCertificate = doNotEncodeSenderCertificate;
 
                 // check if the complete chain is included in the sender issuers.
                 if (senderIssuerCertificates != null && senderIssuerCertificates.Count > 0)
@@ -165,7 +176,14 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
-        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
+        public override void Decrypt(
+            X509Certificate2 certificate,
+            Nonce receiverNonce,
+            string securityPolicyUri,
+            Nonce ephemeralKey = null,
+            X509Certificate2 senderCertificate = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            CertificateValidator validator = null)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)
@@ -220,6 +238,9 @@ namespace Opc.Ua
             {
                 EncryptedSecret secret = new EncryptedSecret();
 
+                secret.SenderCertificate = senderCertificate;
+                secret.SenderIssuerCertificates = senderIssuerCertificates;
+                secret.Validator = validator;
                 secret.ReceiverCertificate = certificate;
                 secret.ReceiverNonce = ephemeralKey;
                 secret.SecurityPolicyUri = securityPolicyUri;
@@ -351,9 +372,10 @@ namespace Opc.Ua
             X509Certificate2 receiverCertificate,
             byte[] receiverNonce,
             string securityPolicyUri,
+            Nonce receiverEphemeralKey = null,
             X509Certificate2 senderCertificate = null,
             X509Certificate2Collection senderIssuerCertificates = null,
-            Nonce receiverEphemeralKey = null)
+            bool doNotEncodeSenderCertificate = false)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)
@@ -377,7 +399,14 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
-        public override void Decrypt(X509Certificate2 certificate, Nonce receiverNonce, string securityPolicyUri, Nonce ephemeralKey = null)
+        public override void Decrypt(
+            X509Certificate2 certificate,
+            Nonce receiverNonce,
+            string securityPolicyUri,
+            Nonce ephemeralKey = null,
+            X509Certificate2 senderCertificate = null,
+            X509Certificate2Collection senderIssuerCertificates = null,
+            CertificateValidator validator = null)
         {
             // handle no encryption.
             if (String.IsNullOrEmpty(securityPolicyUri) || securityPolicyUri == SecurityPolicies.None)

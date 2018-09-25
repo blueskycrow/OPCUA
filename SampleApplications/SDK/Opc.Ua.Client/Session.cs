@@ -1027,7 +1027,14 @@ namespace Opc.Ua.Client
                 SignatureData userTokenSignature = identityToken.Sign(dataToSign, securityPolicyUri);
 
                 // encrypt token.
-                identityToken.Encrypt(m_serverCertificate, m_serverNonce, securityPolicyUri, m_instanceCertificate, m_instanceCertificateChain, m_eccServerEphermalKey);
+                identityToken.Encrypt(
+                    m_serverCertificate,
+                    m_serverNonce,
+                    m_userTokenSecurityPolicyUri,
+                    m_eccServerEphermalKey,
+                    m_instanceCertificate,
+                    m_instanceCertificateChain,
+                    m_endpoint.Description.SecurityMode != MessageSecurityMode.None);
 
                 // send the software certificates assigned to the client.
                 SignedSoftwareCertificateCollection clientSoftwareCertificates = GetSoftwareCertificates();
@@ -2377,7 +2384,14 @@ namespace Opc.Ua.Client
                 SignatureData userTokenSignature = identityToken.Sign(dataToSign, userTokenSecurityPolicyUri);
 
                 // encrypt token.
-                identityToken.Encrypt(serverCertificate, serverNonce, userTokenSecurityPolicyUri, m_instanceCertificate, m_instanceCertificateChain, m_eccServerEphermalKey);
+                identityToken.Encrypt(
+                    serverCertificate, 
+                    serverNonce, 
+                    userTokenSecurityPolicyUri, 
+                    m_eccServerEphermalKey, 
+                    m_instanceCertificate, 
+                    m_instanceCertificateChain,
+                    m_endpoint.Description.SecurityMode != MessageSecurityMode.None);
 
                 // send the software certificates assigned to the client.
                 SignedSoftwareCertificateCollection clientSoftwareCertificates = GetSoftwareCertificates();
@@ -2580,13 +2594,21 @@ namespace Opc.Ua.Client
                     StatusCodes.BadSecurityPolicyRejected,
                     $"Cannot change security policy after CreateSession. Expected={m_userTokenSecurityPolicyUri} Current={securityPolicyUri}");
             }
+
             // sign data with user token.
             identityToken = identity.GetIdentityToken();
             identityToken.PolicyId = identityPolicy.PolicyId;
             userTokenSignature = identityToken.Sign(dataToSign, securityPolicyUri);
 
             // encrypt token.
-            identityToken.Encrypt(m_serverCertificate, serverNonce, securityPolicyUri, m_instanceCertificate, m_instanceCertificateChain, m_eccServerEphermalKey);
+            identityToken.Encrypt(
+                m_serverCertificate,
+                serverNonce,
+                m_userTokenSecurityPolicyUri,
+                m_eccServerEphermalKey,
+                m_instanceCertificate,
+                m_instanceCertificateChain,
+                m_endpoint.Description.SecurityMode != MessageSecurityMode.None);
 
             // send the software certificates assigned to the client.
             SignedSoftwareCertificateCollection clientSoftwareCertificates = GetSoftwareCertificates();
