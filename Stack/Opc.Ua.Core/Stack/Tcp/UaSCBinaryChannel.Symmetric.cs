@@ -240,6 +240,10 @@ namespace Opc.Ua.Bindings
 
         static readonly byte[] s_HkdfClientLabel = new UTF8Encoding().GetBytes("opcua-client");
         static readonly byte[] s_HkdfServerLabel = new UTF8Encoding().GetBytes("opcua-server");
+        static readonly byte[] s_HkdfAes128SignOnlyKeyLength = BitConverter.GetBytes((ushort)32);
+        static readonly byte[] s_HkdfAes256SignOnlyKeyLength = BitConverter.GetBytes((ushort)48);
+        static readonly byte[] s_HkdfAes128SignAndEncryptKeyLength = BitConverter.GetBytes((ushort)64);
+        static readonly byte[] s_HkdfAes256SignAndEncryptKeyLength = BitConverter.GetBytes((ushort)96);
 
         /// <summary>
         /// Computes the keys for a token.
@@ -268,8 +272,18 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 {
                     algorithmName = HashAlgorithmName.SHA256;
-                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfClientLabel, clientSecret, serverSecret), token, false);
-                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfServerLabel, serverSecret, clientSecret), token, true);
+                    var length = (SecurityMode == MessageSecurityMode.Sign) ? s_HkdfAes128SignOnlyKeyLength : s_HkdfAes128SignAndEncryptKeyLength;
+                    var serverSalt = Utils.Append(length, s_HkdfServerLabel, serverSecret, clientSecret);
+                    var clientSalt = Utils.Append(length, s_HkdfClientLabel, clientSecret, serverSecret);
+
+                    Utils.Trace($"Length={Utils.ToHexString(length)}");
+                    Utils.Trace($"ClientSecret={Utils.ToHexString(clientSecret)}");
+                    Utils.Trace($"ServerSecret={Utils.ToHexString(clientSecret)}");
+                    Utils.Trace($"ServerSalt={Utils.ToHexString(serverSalt)}");
+                    Utils.Trace($"ClientSalt={Utils.ToHexString(clientSalt)}");
+
+                    DeriveKeysWithHKDF(algorithmName, serverSalt, token, true);
+                    DeriveKeysWithHKDF(algorithmName, clientSalt, token, false);
                     break;
                 }  
 
@@ -277,8 +291,18 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
                 {
                     algorithmName = HashAlgorithmName.SHA384;
-                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfClientLabel, clientSecret, serverSecret), token, false);
-                    DeriveKeysWithHKDF(algorithmName, Utils.Append(s_HkdfServerLabel, serverSecret, clientSecret), token, true);
+                    var length = (SecurityMode == MessageSecurityMode.Sign) ? s_HkdfAes256SignOnlyKeyLength : s_HkdfAes256SignAndEncryptKeyLength;
+                    var serverSalt = Utils.Append(length, s_HkdfServerLabel, serverSecret, clientSecret);
+                    var clientSalt = Utils.Append(length, s_HkdfClientLabel, clientSecret, serverSecret);
+
+                    Utils.Trace($"Length={Utils.ToHexString(length)}");
+                    Utils.Trace($"ClientSecret={Utils.ToHexString(clientSecret)}");
+                    Utils.Trace($"ServerSecret={Utils.ToHexString(clientSecret)}");
+                    Utils.Trace($"ServerSalt={Utils.ToHexString(serverSalt)}");
+                    Utils.Trace($"ClientSalt={Utils.ToHexString(clientSalt)}");
+
+                    DeriveKeysWithHKDF(algorithmName, serverSalt, token, true);
+                    DeriveKeysWithHKDF(algorithmName, clientSalt, token, false);
                     break;
                 }
 

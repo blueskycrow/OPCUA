@@ -15,7 +15,7 @@
     <ApplicationCertificate>
       <StoreType>Directory</StoreType>
       <StorePath>..\..\..\..\..\PKI\own</StorePath>
-      <SubjectName>CN=UASampleServer-nistP384, DC=REDSTONE</SubjectName>
+      <SubjectName>UASampleServer-nistP384</SubjectName>
     </ApplicationCertificate>
 
     <!-- Where the issuer certificate are stored (certificate authorities) -->

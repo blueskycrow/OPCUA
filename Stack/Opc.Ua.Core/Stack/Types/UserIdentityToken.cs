@@ -169,7 +169,7 @@ namespace Opc.Ua
 
                 var utf8 = new UTF8Encoding(false).GetBytes(m_decryptedPassword);
                 m_password = secret.Encrypt(utf8, receiverNonce);
-                m_encryptionAlgorithm = String.Empty;
+                m_encryptionAlgorithm = null;
             }
         }
 

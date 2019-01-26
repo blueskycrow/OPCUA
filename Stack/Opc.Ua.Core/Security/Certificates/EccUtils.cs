@@ -679,17 +679,18 @@ namespace Opc.Ua
             encryptingKey = new byte[encryptingKeySize];
             iv = new byte[blockSize];
 
-            var seed = Utils.Append(s_Label, senderNonce.Data, receiverNonce.Data);
+            var keyLength = BitConverter.GetBytes((ushort)(encryptingKeySize + blockSize));
+            var salt = Utils.Append(keyLength, s_Label, senderNonce.Data, receiverNonce.Data);
 
             byte[] keyData = null;
 
             if (forDecryption)
             {
-                keyData = receiverNonce.DeriveKey(senderNonce, seed, algorithmName, encryptingKeySize + blockSize);
+                keyData = receiverNonce.DeriveKey(senderNonce, salt, algorithmName, encryptingKeySize + blockSize);
             }
             else
             {
-                keyData = senderNonce.DeriveKey(receiverNonce, seed, algorithmName, encryptingKeySize + blockSize);
+                keyData = senderNonce.DeriveKey(receiverNonce, salt, algorithmName, encryptingKeySize + blockSize);
             }
 
             Buffer.BlockCopy(keyData, 0, encryptingKey, 0, encryptingKey.Length);
