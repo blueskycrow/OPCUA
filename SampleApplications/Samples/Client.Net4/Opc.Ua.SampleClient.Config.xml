@@ -31,8 +31,10 @@
            Also a complete distinguished name can be specified here: 'CN=UASampleClient, DC=localhost'.
            In this case the first certificate matching the complete distinguished name is used. localhost is replaced with the hostname.
            If no certificate is found, a new self signed application certificate is created.
-           The Thumbprint should be specified if the CN or DN does not uniquely identify a certificate. -->
-      <SubjectName>UASampleClient-brainpoolP256r1</SubjectName>
+           The Thumbprint should be specified if the CN or DN does not uniquely identify a certificate. 
+      <SubjectName>UASampleClient-rsa2048</SubjectName>
+      -->
+      <SubjectName>UASampleClient-nistP256</SubjectName>
 
       <!-- The SHA1 thumbprint for the certificate.
            The thumbprint uniquely identifies a certificate.
@@ -169,6 +171,14 @@
          
          The first policy in the list is assigned to base address. -->
     <SecurityPolicies>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
+      </ServerSecurityPolicy>
       <ServerSecurityPolicy>
         <SecurityMode>None_1</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>

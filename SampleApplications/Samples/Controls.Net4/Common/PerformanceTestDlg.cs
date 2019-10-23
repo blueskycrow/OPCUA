@@ -40,6 +40,7 @@ using System.ServiceModel;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.IO;
+using System.Diagnostics;
 
 using Opc.Ua.Client;
 using Opc.Ua.Client.Controls;
@@ -283,7 +284,7 @@ namespace Opc.Ua.Sample.Controls
             result.Results.Add(100, -1);
             result.Results.Add(250, -1);
             result.Results.Add(500, -1);
-
+            result.Results.Add(1000, -1);
             try
             {
                 // update the endpoint.
@@ -292,6 +293,7 @@ namespace Opc.Ua.Sample.Controls
                     endpoint.UpdateFromServer();
                 }
 
+                /*
                 SessionClient client = null;
 
                 Uri url = new Uri(endpoint.Description.EndpointUrl);
@@ -304,6 +306,17 @@ namespace Opc.Ua.Sample.Controls
                     m_messageContext);
 
                 client = new SessionClient(channel);
+                */
+
+                var session = Session.Create(
+                    m_configuration,
+                    endpoint,
+                    false,
+                    true,
+                    "StackTest",
+                    60000,
+                    null,
+                    null).Result;
 
                 List<int> requestSizes = new List<int>(result.Results.Keys);
 
@@ -342,7 +355,7 @@ namespace Opc.Ua.Sample.Controls
                     DataValueCollection results = null;
                     DiagnosticInfoCollection diagnosticInfos = null;
 
-                    client.Read(
+                    session.Read(
                         requestHeader,
                         0,
                         TimestampsToReturn.Both,
@@ -356,11 +369,12 @@ namespace Opc.Ua.Sample.Controls
                     }
 
                     // do test.
-                    DateTime start = DateTime.UtcNow;
+                    Stopwatch timer = new Stopwatch();
+                    timer.Start();
 
                     for (int jj = 0; jj < result.Iterations; jj++)
                     {
-                        client.Read(
+                        session.Read(
                             requestHeader,
                             0,
                             TimestampsToReturn.Both,
@@ -374,9 +388,9 @@ namespace Opc.Ua.Sample.Controls
                         }
                     }
 
-                    DateTime finish = DateTime.UtcNow;
+                    timer.Stop();
 
-                    long totalTicks = finish.Ticks - start.Ticks;
+                    long totalTicks = timer.ElapsedTicks;
                     decimal averageMilliseconds = ((((decimal)totalTicks) / ((decimal)result.Iterations))) / ((decimal)TimeSpan.TicksPerMillisecond);
                     result.Results[requestSizes[ii]] = (double)averageMilliseconds;
                 }

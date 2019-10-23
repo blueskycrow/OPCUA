@@ -54,6 +54,11 @@ namespace Opc.Ua
         public const string Basic256Sha256 = BaseUri + "Basic256Sha256";
 
         /// <summary>
+        /// The URI for the Aes128_Gcm256_RsaOaep security policy.
+        /// </summary>
+        public const string Aes128_Gcm256_RsaOaep = BaseUri + "Aes128_Gcm256_RsaOaep";
+
+        /// <summary>
         /// The URI for the Aes128_Sha256_nistP256 security policy.
         /// </summary>
         public const string Aes128_Sha256_nistP256 = BaseUri + "Aes128_Sha256_nistP256";
