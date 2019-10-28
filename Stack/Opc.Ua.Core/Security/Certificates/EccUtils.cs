@@ -17,18 +17,42 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.X509;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Agreement;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Modes;
+using Org.BouncyCastle.Crypto.Digests;
+
 namespace Opc.Ua
 {
     public class Nonce : IDisposable
     {
         #if NET47
         private ECDiffieHellmanCng m_ecdh;
+        private AsymmetricCipherKeyPair m_bcKeyPair;
         #endif
+        
+        enum Algorithm
+        {
+            Unknown,
+            RSA,
+            nistP256,
+            nistP384,
+            brainpoolP256r1,
+            brainpoolP384r1,
+            Ed25519
+        }
 
         private Nonce()
         {
             #if NET47
             m_ecdh = null;
+            m_bcKeyPair = null;
             #endif
         }
 
@@ -64,6 +88,47 @@ namespace Opc.Ua
         public byte[] DeriveKey(Nonce remoteNonce, byte[] salt, HashAlgorithmName algorithm, int length)
         {
             #if NET47
+            if (m_bcKeyPair != null)
+            {
+                var localPublicKey = m_bcKeyPair.Public;
+
+                if (localPublicKey is X25519PublicKeyParameters)
+                {
+                    X25519Agreement agreement = new X25519Agreement();
+                    agreement.Init(m_bcKeyPair.Private);
+
+                    var key = new X25519PublicKeyParameters(remoteNonce.Data, 0);
+                    byte[] secret = new byte[agreement.AgreementSize];
+                    agreement.CalculateAgreement(key, secret, 0);
+
+                    HkdfBytesGenerator generator = new HkdfBytesGenerator(new Sha256Digest());
+                    generator.Init(new HkdfParameters(secret, salt, null));
+
+                    byte[] output = new byte[length];
+                    generator.GenerateBytes(output, 0, output.Length);
+                    return output;
+                }
+
+                if (localPublicKey is X448PublicKeyParameters)
+                {
+                    X448Agreement agreement = new X448Agreement();
+                    agreement.Init(m_bcKeyPair.Private);
+
+                    var key = new X448PublicKeyParameters(remoteNonce.Data, 0);
+                    byte[] secret = new byte[agreement.AgreementSize];
+                    agreement.CalculateAgreement(key, secret, 0);
+
+                    HkdfBytesGenerator generator = new HkdfBytesGenerator(new Sha256Digest());
+                    generator.Init(new HkdfParameters(secret, salt, null));
+
+                    byte[] output = new byte[length];
+                    generator.GenerateBytes(output, 0, output.Length);
+                    return output;
+                }
+
+                throw new NotSupportedException();
+            }
+
             if (m_ecdh != null)
             {
                 var secret = m_ecdh.DeriveKeyFromHmac(remoteNonce.m_ecdh.PublicKey, algorithm, salt, null, null);
@@ -125,50 +190,98 @@ namespace Opc.Ua
 
             return nonce;
             #else
-            ECCurve curve;
-            CngAlgorithm algorithm;
+            ECCurve curve = ECCurve.NamedCurves.nistP256;
+            CngAlgorithm algorithm = CngAlgorithm.Rsa;
 
             switch (securityPolicyUri)
             {
-                case SecurityPolicies.Aes128_Sha256_nistP256: { curve = ECCurve.NamedCurves.nistP256; algorithm = CngAlgorithm.Sha256; break; }
-                case SecurityPolicies.Aes256_Sha384_nistP384: { curve = ECCurve.NamedCurves.nistP384; algorithm = CngAlgorithm.Sha384; break; }
-                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1: { curve = ECCurve.NamedCurves.brainpoolP256r1; algorithm = CngAlgorithm.Sha256; break; }
-                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1: { curve = ECCurve.NamedCurves.brainpoolP384r1; algorithm = CngAlgorithm.Sha384; break; }
+                case SecurityPolicies.Aes128_Sha256_nistP256: { return CreateNonce(ECCurve.NamedCurves.nistP256, CngAlgorithm.Sha256); }
+                case SecurityPolicies.Aes256_Sha384_nistP384: { return CreateNonce(ECCurve.NamedCurves.nistP384, CngAlgorithm.Sha384); }
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1: { return CreateNonce(ECCurve.NamedCurves.brainpoolP256r1, CngAlgorithm.Sha256); }
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1: { return CreateNonce(ECCurve.NamedCurves.brainpoolP384r1, CngAlgorithm.Sha384); }
+
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                {
+                    return CreateNonceForCurve25519();
+                }
+
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
+                {
+                    return CreateNonceForCurve448();
+                }
 
                 default:
                 {
-                    algorithm = CngAlgorithm.Rsa;
-                    curve = new ECCurve();
-                    break;
+                    nonce = new Nonce()
+                    {
+                        Data = Utils.Nonce.CreateNonce(nonceLength)
+                    };
+
+                    return nonce;
                 }
             }
+            #endif
+        }
 
-            if (algorithm == CngAlgorithm.Rsa)
+        #if NET47
+        private static Nonce CreateNonceForCurve25519()
+        {
+            SecureRandom random = new SecureRandom();
+            IAsymmetricCipherKeyPairGenerator generator = new X25519KeyPairGenerator();
+            generator.Init(new X25519KeyGenerationParameters(random));
+
+            var keyPair = generator.GenerateKeyPair();
+
+            byte[] senderNonce = new byte[X25519PublicKeyParameters.KeySize];
+            ((X25519PublicKeyParameters)(keyPair.Public)).Encode(senderNonce, 0);
+
+            var nonce = new Nonce()
             {
-                nonce = new Nonce()
-                {
-                    Data = Utils.Nonce.CreateNonce(nonceLength)
-                };
+                Data = senderNonce,
+                m_bcKeyPair = keyPair
+            };
 
-                return nonce;
-            }
+            return nonce;
+        }
 
+        private static Nonce CreateNonceForCurve448()
+        {
+            SecureRandom random = new SecureRandom();
+            IAsymmetricCipherKeyPairGenerator generator = new X448KeyPairGenerator();
+            generator.Init(new X448KeyGenerationParameters(random));
+
+            var keyPair = generator.GenerateKeyPair();
+
+            byte[] senderNonce = new byte[X448PublicKeyParameters.KeySize];
+            ((X448PublicKeyParameters)(keyPair.Public)).Encode(senderNonce, 0);
+
+            var nonce = new Nonce()
+            {
+                Data = senderNonce,
+                m_bcKeyPair = keyPair
+            };
+
+            return nonce;
+        }
+
+        private static Nonce CreateNonce(ECCurve curve, CngAlgorithm algorithm)
+        {
             var ecdh = (ECDiffieHellmanCng)ECDiffieHellmanCng.Create(curve);
 
             var data = ecdh.Key.Export(CngKeyBlobFormat.EccPublicBlob);
             var senderNonce = new byte[data.Length - 8];
             Buffer.BlockCopy(data, 8, senderNonce, 0, senderNonce.Length);
 
-            nonce = new Nonce()
+            var nonce = new Nonce()
             {
                 Data = senderNonce,
                 m_ecdh = ecdh
             };
 
             return nonce;
-            #endif
         }
-
+        #endif
+        
         public static Nonce CreateNonce(string securityPolicyUri, byte[] nonceData)
         {
             if (securityPolicyUri == null)
@@ -187,48 +300,83 @@ namespace Opc.Ua
             };
 
             #if NET47
-            ECCurve curve;
-            CngAlgorithm algorithm;
-
             switch (securityPolicyUri)
             {
-                case SecurityPolicies.Aes128_Sha256_nistP256: { curve = ECCurve.NamedCurves.nistP256; algorithm = CngAlgorithm.Sha256; break; }
-                case SecurityPolicies.Aes256_Sha384_nistP384: { curve = ECCurve.NamedCurves.nistP384; algorithm = CngAlgorithm.Sha384; break; }
-                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1: { curve = ECCurve.NamedCurves.brainpoolP256r1; algorithm = CngAlgorithm.Sha256; break; }
-                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1: { curve = ECCurve.NamedCurves.brainpoolP384r1; algorithm = CngAlgorithm.Sha384; break; }
-    
+                case SecurityPolicies.Aes128_Sha256_nistP256: { return CreateNonce(ECCurve.NamedCurves.nistP256, CngAlgorithm.Sha256, nonceData); }
+                case SecurityPolicies.Aes256_Sha384_nistP384: { return CreateNonce(ECCurve.NamedCurves.nistP384, CngAlgorithm.Sha384, nonceData); }
+                case SecurityPolicies.Aes128_Sha256_brainpoolP256r1: { return CreateNonce(ECCurve.NamedCurves.brainpoolP256r1, CngAlgorithm.Sha256, nonceData); }
+                case SecurityPolicies.Aes256_Sha384_brainpoolP384r1: { return CreateNonce(ECCurve.NamedCurves.brainpoolP384r1, CngAlgorithm.Sha384, nonceData); }
+                    
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                {
+                    return CreateNonceForCurve25519(nonceData);
+                }
+
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
+                {
+                    return CreateNonceForCurve448(nonceData);
+                }
+
                 default:
                 {
-                    algorithm = CngAlgorithm.Rsa;
-                    curve = ECCurve.NamedCurves.nistP256;
                     break;
                 }
             }
-    
-            if (algorithm != CngAlgorithm.Rsa)
-            {
-                int keyLength = nonceData.Length;
-
-                using (var ostrm = new System.IO.MemoryStream())
-                {
-                    byte[] qx = new byte[keyLength / 2];
-                    byte[] qy = new byte[keyLength / 2];
-                    Buffer.BlockCopy(nonceData, 0, qx, 0, keyLength / 2);
-                    Buffer.BlockCopy(nonceData, keyLength / 2, qy, 0, keyLength / 2);
-
-                    var ecdhParameters = new ECParameters
-                    {
-                        Curve = curve,
-                        Q = { X = qx, Y = qy }
-                    };
-
-                    nonce.m_ecdh = (ECDiffieHellmanCng)ECDiffieHellman.Create(ecdhParameters);
-                }
-            }
             #endif
+                   
+            return nonce;
+        }
+        
+
+        #if NET47
+        private static Nonce CreateNonceForCurve25519(byte[] nonceData)
+        {
+            var nonce = new Nonce()
+            {
+                Data = nonceData,
+            };
 
             return nonce;
         }
+
+        private static Nonce CreateNonceForCurve448(byte[] nonceData)
+        {
+            var nonce = new Nonce()
+            {
+                Data = nonceData,
+            };
+
+            return nonce;
+        }
+
+        private static Nonce CreateNonce(ECCurve curve, CngAlgorithm algorithm, byte[] nonceData)
+        {
+            Nonce nonce = new Nonce()
+            {
+                Data = nonceData
+            };
+
+            int keyLength = nonceData.Length;
+
+            using (var ostrm = new System.IO.MemoryStream())
+            {
+                byte[] qx = new byte[keyLength / 2];
+                byte[] qy = new byte[keyLength / 2];
+                Buffer.BlockCopy(nonceData, 0, qx, 0, keyLength / 2);
+                Buffer.BlockCopy(nonceData, keyLength / 2, qy, 0, keyLength / 2);
+
+                var ecdhParameters = new ECParameters
+                {
+                    Curve = curve,
+                    Q = { X = qx, Y = qy }
+                };
+
+                nonce.m_ecdh = (ECDiffieHellmanCng)ECDiffieHellman.Create(ecdhParameters);
+            }
+
+            return nonce;
+        }
+        #endif
     }
 
     /// <summary>
@@ -246,6 +394,8 @@ namespace Opc.Ua
                     case SecurityPolicies.Aes256_Sha384_nistP384:
                     case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                     case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                    case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                    case SecurityPolicies.ChaCha20Poly1305_curve448:
                     {
                         return true;
                     }
@@ -255,8 +405,8 @@ namespace Opc.Ua
             return false;
         }
 
-        #if NET47
-        public static string[] GetSupportedSecurityPolicyUris(X509Certificate2 certificate)
+#if NET47
+        public static string[] GetSupportedSecurityPolicyUris(ICertificate certificate)
         {
             string[] securityPolicyUris;
 
@@ -268,13 +418,13 @@ namespace Opc.Ua
             return securityPolicyUris;
         }
 
-        public static ECDsa GetPublicKey(X509Certificate2 certificate)
+        public static ECDsa GetPublicKey(ICertificate certificate)
         {
             string[] securityPolicyUris;
             return GetPublicKey(certificate, out securityPolicyUris);
         }
 
-        public static ECDsa GetPublicKey(X509Certificate2 certificate, out string[] securityPolicyUris)
+        public static ECDsa GetPublicKey(ICertificate certificate, out string[] securityPolicyUris)
         {
             securityPolicyUris = null;
 
@@ -365,19 +515,29 @@ namespace Opc.Ua
 
             return ECDsa.Create(ecParameters);
         }
-        #endif
+#endif
 
         /// <summary>
         /// Returns the length of a ECSA signature of a digest.
         /// </summary>
-        public static int GetSignatureLength(X509Certificate2 signingCertificate)
+        public static int GetSignatureLength(ICertificate signingCertificate)
         {
             if (signingCertificate == null)
             {
                 throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "No public key for certificate.");
             }
 
-            #if NET47
+#if NET47
+            if (signingCertificate.BcCertificate.GetPublicKey() is Ed25519PublicKeyParameters)
+            {
+                return 64;
+            }
+
+            if (signingCertificate.BcCertificate.GetPublicKey() is Ed448PublicKeyParameters)
+            {
+                return 114;
+            }
+
             using (var publicKey = GetPublicKey(signingCertificate))
             {
                 if (publicKey == null)
@@ -387,7 +547,7 @@ namespace Opc.Ua
 
                 return publicKey.KeySize/4;
             }
-            #endif
+#endif
 
             throw new NotImplementedException();
         }
@@ -414,6 +574,8 @@ namespace Opc.Ua
                 }
             
                 case SecurityPolicies.None:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 default:
                 {
                     return HashAlgorithmName.SHA256;
@@ -426,7 +588,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Encrypt(
             byte[] dataToEncrypt,
-            X509Certificate2 encryptingCertificate)
+            ICertificate encryptingCertificate)
         {
             return dataToEncrypt;
         }
@@ -436,7 +598,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Decrypt(
             ArraySegment<byte> dataToDecrypt,
-            X509Certificate2 encryptingCertificate)
+            ICertificate encryptingCertificate)
         {
             return dataToDecrypt.Array;
         }
@@ -446,7 +608,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Sign(
             ArraySegment<byte> dataToSign,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             string securityPolicyUri)
         {
             var algorithm = GetSignatureAlgorithmName(securityPolicyUri);
@@ -458,10 +620,55 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Sign(
             ArraySegment<byte> dataToSign,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             HashAlgorithmName algorithm)
         {
-            #if NET47
+
+#if NET47
+            var publicKey = signingCertificate.BcCertificate.GetPublicKey();
+
+            if (publicKey is Ed25519PublicKeyParameters)
+            {
+                var signer = new Ed25519Signer();
+
+                signer.Init(true, signingCertificate.BcPrivateKey);
+                signer.BlockUpdate(dataToSign.Array, dataToSign.Offset, dataToSign.Count);
+                byte[] signature = signer.GenerateSignature();
+#if DEBUG
+                var verifier = new Ed25519Signer();
+
+                verifier.Init(false, signingCertificate.BcCertificate.GetPublicKey());
+                verifier.BlockUpdate(dataToSign.Array, dataToSign.Offset, dataToSign.Count);
+
+                if (!verifier.VerifySignature(signature))
+                {
+                    throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Could not verify signature.");
+                }
+#endif
+                return signature;
+            }
+            
+            if (publicKey is Ed448PublicKeyParameters)
+            {
+                var signer = new Ed448Signer(new byte[32]);
+
+                signer.Init(true, signingCertificate.BcPrivateKey);
+                signer.BlockUpdate(dataToSign.Array, dataToSign.Offset, dataToSign.Count);
+                byte[] signature = signer.GenerateSignature();
+#if DEBUG
+                var verifier = new Ed448Signer(new byte[32]);
+
+                verifier.Init(false, signingCertificate.BcCertificate.GetPublicKey());
+                verifier.BlockUpdate(dataToSign.Array, dataToSign.Offset, dataToSign.Count);
+
+                if (!verifier.VerifySignature(signature))
+                {
+                    throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Could not verify signature.");
+                }
+#endif
+                return signature;
+            }
+            
             var senderPrivateKey = signingCertificate.GetECDsaPrivateKey() as ECDsaCng;
 
             if (senderPrivateKey == null)
@@ -473,22 +680,22 @@ namespace Opc.Ua
             {
                 var signature = senderPrivateKey.SignData(dataToSign.Array, dataToSign.Offset, dataToSign.Count, algorithm);
 
-                #if DEBUG
-                using (ECDsa ecdsa = EccUtils.GetPublicKey(new X509Certificate2(signingCertificate.RawData)))
+#if DEBUG
+                using (ECDsa ecdsa = EccUtils.GetPublicKey(new ICertificate(signingCertificate.RawData)))
                 {
                     if (!ecdsa.VerifyData(dataToSign.Array, dataToSign.Offset, dataToSign.Count, signature, algorithm))
                     {
                         throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Could not verify signature.");
                     }
                 }
-                #endif
+#endif
 
                 return signature;
             }
 
-            #else
+#else
             throw new NotSupportedException();
-            #endif
+#endif
         }
 
         /// <summary>
@@ -497,7 +704,7 @@ namespace Opc.Ua
         public static bool Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             string securityPolicyUri)
         {
             return Verify(dataToVerify, signature, signingCertificate, GetSignatureAlgorithmName(securityPolicyUri));
@@ -509,10 +716,42 @@ namespace Opc.Ua
         public static bool Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             HashAlgorithmName algorithm)
         {
-            #if NET47
+#if NET47
+            var publicKey = signingCertificate.BcCertificate.GetPublicKey();
+
+            if (publicKey is Ed25519PublicKeyParameters)
+            {
+                var verifier = new Ed25519Signer();
+
+                verifier.Init(false, signingCertificate.BcCertificate.GetPublicKey());
+                verifier.BlockUpdate(dataToVerify.Array, dataToVerify.Offset, dataToVerify.Count);
+
+                if (!verifier.VerifySignature(signature))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (publicKey is Ed448PublicKeyParameters)
+            {
+                var verifier = new Ed448Signer(new byte[32]);
+
+                verifier.Init(false, signingCertificate.BcCertificate.GetPublicKey());
+                verifier.BlockUpdate(dataToVerify.Array, dataToVerify.Offset, dataToVerify.Count);
+
+                if (!verifier.VerifySignature(signature))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
             using (ECDsa ecdsa = EccUtils.GetPublicKey(signingCertificate))
             {
                 if (!ecdsa.VerifyData(dataToVerify.Array, dataToVerify.Offset, dataToVerify.Count, signature, algorithm))
@@ -522,17 +761,17 @@ namespace Opc.Ua
             }
 
             return true;
-            #else
+#else
             throw new NotSupportedException();
-            #endif
+#endif
         }
     }
 
     public class EncryptedSecret
     {
-        public X509Certificate2 SenderCertificate { get; set; }
+        public ICertificate SenderCertificate { get; set; }
 
-        public X509Certificate2Collection SenderIssuerCertificates { get; set; }
+        public ICertificateCollection SenderIssuerCertificates { get; set; }
 
         public bool DoNotEncodeSenderCertificate { get; set; }
 
@@ -540,7 +779,7 @@ namespace Opc.Ua
 
         public Nonce ReceiverNonce { get; set; }
 
-        public X509Certificate2 ReceiverCertificate { get; set; }
+        public ICertificate ReceiverCertificate { get; set; }
 
         public CertificateValidator Validator { get; set; }
 
@@ -552,6 +791,14 @@ namespace Opc.Ua
             byte[] encryptingKey,
             byte[] iv)
         {
+            bool useAuthenticatedEncryption = false;
+
+            if (SenderCertificate.BcCertificate.GetPublicKey() is Ed25519PublicKeyParameters ||
+                SenderCertificate.BcCertificate.GetPublicKey() is Ed448PublicKeyParameters)
+            {
+                useAuthenticatedEncryption = true;
+            }
+
             byte[] dataToEncrypt = null;
 
             using (var encoder = new BinaryEncoder(ServiceMessageContext.GlobalContext))
@@ -559,17 +806,26 @@ namespace Opc.Ua
                 encoder.WriteByteString(null, nonce);
                 encoder.WriteByteString(null, secret);
 
-                int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
-                paddingSize %= iv.Length;
-
-                for (int ii = 0; ii < paddingSize; ii++)
+                // add padding.
+                if (!useAuthenticatedEncryption)
                 {
-                    encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
+                    int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
+                    paddingSize %= iv.Length;
+
+                    for (int ii = 0; ii < paddingSize; ii++)
+                    {
+                        encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
+                    }
+
+                    encoder.WriteUInt16(null, (ushort)paddingSize);
                 }
 
-                encoder.WriteUInt16(null, (ushort)paddingSize);
-
                 dataToEncrypt = encoder.CloseAndReturnBuffer();
+            }
+
+            if (useAuthenticatedEncryption)
+            {
+                return EncryptWithChaCha20Poly1305(encryptingKey, iv, dataToEncrypt);
             }
 
             using (Aes aes = Aes.Create())
@@ -593,6 +849,74 @@ namespace Opc.Ua
             return dataToEncrypt;
         }
 
+        private static byte[] EncryptWithChaCha20Poly1305(
+            byte[] encryptingKey,
+            byte[] iv,
+            byte[] dataToEncrypt)
+        {
+            Utils.Trace($"EncryptKey={Utils.ToHexString(encryptingKey)}");
+            Utils.Trace($"EncryptIV={Utils.ToHexString(iv)}");
+
+            int signatureLength = 16;
+
+            AeadParameters parameters = new AeadParameters(
+                new KeyParameter(encryptingKey),
+                signatureLength * 8,
+                iv,
+                null);
+
+            ChaCha20Poly1305 encryptor = new ChaCha20Poly1305();
+            encryptor.Init(true, parameters);
+
+            byte[] ciphertext = new byte[encryptor.GetOutputSize(dataToEncrypt.Length)];
+            int length = encryptor.ProcessBytes(dataToEncrypt, 0, dataToEncrypt.Length, ciphertext, 0);
+            length += encryptor.DoFinal(ciphertext, length);
+
+            if (ciphertext.Length != length)
+            {
+                throw ServiceResultException.Create(
+                    StatusCodes.BadSecurityChecksFailed,
+                    $"CipherText not the expected size. [{ciphertext.Length} != {length}]");
+            }
+
+            return ciphertext;
+        }
+
+        private ArraySegment<byte> DecryptWithChaCha20Poly1305(
+            byte[] encryptingKey,
+            byte[] iv,
+            byte[] dataToDecrypt,
+            int offset,
+            int count)
+        {
+            Utils.Trace($"EncryptKey={Utils.ToHexString(encryptingKey)}");
+            Utils.Trace($"EncryptIV={Utils.ToHexString(iv)}");
+
+            int signatureLength = 16;
+
+            AeadParameters parameters = new AeadParameters(
+                new KeyParameter(encryptingKey),
+                signatureLength * 8,
+                iv,
+                null);
+
+            ChaCha20Poly1305 decryptor = new ChaCha20Poly1305();
+            decryptor.Init(false, parameters);
+
+            byte[] plaintext = new byte[decryptor.GetOutputSize(count)];
+            int length = decryptor.ProcessBytes(dataToDecrypt, offset, count, plaintext, 0);
+            length += decryptor.DoFinal(plaintext, length);
+
+            if (plaintext.Length != length)
+            {
+                throw ServiceResultException.Create(
+                    StatusCodes.BadSecurityChecksFailed,
+                    $"PlainText not the expected size. [{count} != {length}]");
+            }
+
+            return new ArraySegment<byte>(plaintext);
+        }
+
         private ArraySegment<byte> DecryptSecret(
             byte[] dataToDecrypt,
             int offset,
@@ -600,6 +924,19 @@ namespace Opc.Ua
             byte[] encryptingKey,
             byte[] iv)
         {
+            bool useAuthenticatedEncryption = false;
+
+            if (SenderCertificate.BcCertificate.GetPublicKey() is Ed25519PublicKeyParameters ||
+                SenderCertificate.BcCertificate.GetPublicKey() is Ed448PublicKeyParameters)
+            {
+                useAuthenticatedEncryption = true;
+            }
+
+            if (useAuthenticatedEncryption)
+            {
+                return DecryptWithChaCha20Poly1305(encryptingKey, iv, dataToDecrypt, offset, count);
+            }
+
             using (Aes aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
@@ -672,6 +1009,15 @@ namespace Opc.Ua
                 {
                     encryptingKeySize = 32;
                     algorithmName = HashAlgorithmName.SHA384;
+                    break;
+                }
+
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
+                {
+                    encryptingKeySize = 32;
+                    blockSize = 12;
+                    algorithmName = HashAlgorithmName.SHA256;
                     break;
                 }
             }
@@ -802,28 +1148,14 @@ namespace Opc.Ua
                 }
             }
 
-            #if NET47
-            var senderPrivateKey = SenderCertificate.GetECDsaPrivateKey() as ECDsaCng;
-
-            if (senderPrivateKey == null)
-            {
-                throw new ServiceResultException(StatusCodes.BadCertificateInvalid, "Missing private key needed for creating a signature.");
-            }
-
-            using (senderPrivateKey)
-            {
-                var signature = senderPrivateKey.SignData(message, 0, message.Length - signatureLength, signatureAlgorithm);
-
-                for (int ii = 0; ii < signatureLength; ii++)
-                {
-                    message[ii + message.Length - signatureLength] = signature[ii];
-                }
-            }
-
+#if NET47
+            ArraySegment<byte> dataToSign = new ArraySegment<byte>(message, 0, message.Length - signatureLength);
+            var signature = EccUtils.Sign(dataToSign, SenderCertificate, signatureAlgorithm);
+            Buffer.BlockCopy(signature, 0, message, message.Length - signatureLength, signatureLength);
             return message;
-            #else
+#else
             throw new NotImplementedException();
-            #endif
+#endif
         }
 
         private ArraySegment<byte> VerifyHeaderForEcc(
@@ -886,7 +1218,7 @@ namespace Opc.Ua
                     var senderCertificateChain = Utils.ParseCertificateChainBlob(senderCertificate);
 
                     SenderCertificate = senderCertificateChain[0];
-                    SenderIssuerCertificates = new X509Certificate2Collection();
+                    SenderIssuerCertificates = new ICertificateCollection();
 
                     for (int ii = 1; ii < senderCertificateChain.Count; ii++)
                     {
@@ -945,20 +1277,19 @@ namespace Opc.Ua
                 byte[] signature = new byte[signatureLength];
                 Buffer.BlockCopy(dataToDecrypt.Array, startOfData + (int)length - signatureLength, signature, 0, signatureLength);
 
-                #if NET47
-                using (ECDsa ecdsa = EccUtils.GetPublicKey(SenderCertificate))
+#if NET47
+                ArraySegment<byte> dataToSign = new ArraySegment<byte>(dataToDecrypt.Array, 0, startOfData + (int)length - signatureLength);
+
+                if (!EccUtils.Verify(dataToSign, signature, SenderCertificate, signatureAlgorithm))
                 {
-                    if (!ecdsa.VerifyData(dataToDecrypt.Array, dataToDecrypt.Offset, dataToDecrypt.Count - signatureLength, signature, signatureAlgorithm))
-                    {
-                        throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Could not verify signature.");
-                    }
+                    throw new ServiceResultException(StatusCodes.BadSecurityChecksFailed, "Could not verify signature.");
                 }
 
                 // extract the encrypted data.
                 return new ArraySegment<byte>(dataToDecrypt.Array, startOfEncryption, (int)length - (startOfEncryption - startOfData + signatureLength));
-                #else
+#else
                 throw new NotImplementedException();
-                #endif
+#endif
             }
         }
 

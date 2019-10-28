@@ -26,7 +26,7 @@ namespace Opc.Ua
         /// <summary>
         /// Return the plaintext block size for RSA OAEP encryption.
         /// </summary>
-        public static int GetPlainTextBlockSize(X509Certificate2 encryptingCertificate, bool useOaep)
+        public static int GetPlainTextBlockSize(ICertificate encryptingCertificate, bool useOaep)
         {
             RSA rsa = null;
             try
@@ -62,7 +62,7 @@ namespace Opc.Ua
         /// <summary>
         /// Return the ciphertext block size for RSA OAEP encryption.
         /// </summary>
-        public static int GetCipherTextBlockSize(X509Certificate2 encryptingCertificate, bool useOaep)
+        public static int GetCipherTextBlockSize(ICertificate encryptingCertificate, bool useOaep)
         {
             RSA rsa = null;
             try
@@ -91,7 +91,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the length of a RSA PKCS#1 v1.5 signature of a digest.
         /// </summary>
-        public static int GetSignatureLength(X509Certificate2 signingCertificate)
+        public static int GetSignatureLength(ICertificate signingCertificate)
         {
             RSA rsa = null;
             try
@@ -116,7 +116,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] RsaPkcs15Sha1_Sign(
                     ArraySegment<byte> dataToSign,
-                    X509Certificate2 signingCertificate)
+                    ICertificate signingCertificate)
         {
             RSA rsa = null;
             try
@@ -142,7 +142,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] RsaPkcs15Sha256_Sign(
             ArraySegment<byte> dataToSign,
-            X509Certificate2 signingCertificate)
+            ICertificate signingCertificate)
         {
             RSA rsa = null;
             try
@@ -169,7 +169,7 @@ namespace Opc.Ua
         public static bool RsaPkcs15Sha1_Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 signingCertificate)
+            ICertificate signingCertificate)
         {
             RSA rsa = null;
             try
@@ -196,7 +196,7 @@ namespace Opc.Ua
         public static bool RsaPkcs15Sha256_Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 signingCertificate)
+            ICertificate signingCertificate)
         {
             RSA rsa = null;
             try
@@ -223,7 +223,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Encrypt(
             byte[] dataToEncrypt,
-            X509Certificate2 encryptingCertificate,
+            ICertificate encryptingCertificate,
             bool useOaep)
         {
             RSA rsa = null;
@@ -321,7 +321,7 @@ namespace Opc.Ua
         /// </summary>
         public static byte[] Decrypt(
             ArraySegment<byte> dataToDecrypt,
-            X509Certificate2 encryptingCertificate,
+            ICertificate encryptingCertificate,
             bool useOaep)
         {
             RSA rsa = null;
@@ -410,10 +410,10 @@ namespace Opc.Ua
 
         /// <summary>
         /// Dispose RSA object only if not running on Mono runtime.
-        /// Workaround due to a Mono bug in the X509Certificate2 implementation of RSA.
+        /// Workaround due to a Mono bug in the ICertificate implementation of RSA.
         /// see also: https://github.com/mono/mono/issues/6306
         /// On Mono GetRSAPrivateKey/GetRSAPublickey returns a reference instead of a disposable object.
-        /// Calling Dispose on RSA makes the X509Certificate2 keys unusable on Mono.
+        /// Calling Dispose on RSA makes the ICertificate keys unusable on Mono.
         /// Only call dispose when using .Net and .Net Core runtimes.
         /// </summary>
         /// <param name="rsa">RSA object returned by GetRSAPublicKey/GetRSAPrivateKey</param>

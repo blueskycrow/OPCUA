@@ -32,17 +32,17 @@ using System.Threading.Tasks;
 
 namespace Opc.Ua.Gds.Server
 {
-    public class X509Certificate2KeyPair
+    public class ICertificateKeyPair
     {
-        public readonly X509Certificate2 Certificate;
+        public readonly ICertificate Certificate;
         public readonly string PrivateKeyFormat;
         public readonly byte[] PrivateKey;
 
-        public X509Certificate2KeyPair(X509Certificate2 certificate, string privateKeyFormat, byte[] privateKey)
+        public ICertificateKeyPair(ICertificate certificate, string privateKeyFormat, byte[] privateKey)
         {
             if (certificate.HasPrivateKey)
             {
-                certificate = new X509Certificate2(certificate.RawData);
+                certificate = new ICertificate(certificate.RawData);
             }
             Certificate = certificate;
             PrivateKeyFormat = privateKeyFormat;
@@ -58,7 +58,7 @@ namespace Opc.Ua.Gds.Server
         NodeId Id { get; set; }
         NodeId CertificateType { get; set; }
         CertificateGroupConfiguration Configuration { get; }
-        X509Certificate2 Certificate { get; set; }
+        ICertificate Certificate { get; set; }
         TrustListState DefaultTrustList { get; set; }
         bool UpdateRequired { get; set; }
 
@@ -68,12 +68,12 @@ namespace Opc.Ua.Gds.Server
 
         Task Init();
 
-        Task<X509Certificate2> CreateCACertificateAsync(
+        Task<ICertificate> CreateCACertificateAsync(
             string subjectName
             );
 
         Task<Opc.Ua.X509CRL> RevokeCertificateAsync(
-            X509Certificate2 certificate
+            ICertificate certificate
             );
 
         Task VerifySigningRequestAsync(
@@ -81,13 +81,13 @@ namespace Opc.Ua.Gds.Server
             byte[] certificateRequest
             );
 
-        Task<X509Certificate2> SigningRequestAsync(
+        Task<ICertificate> SigningRequestAsync(
             ApplicationRecordDataType application,
             string[] domainNames,
             byte[] certificateRequest
             );
 
-        Task<X509Certificate2KeyPair> NewKeyPairRequestAsync(
+        Task<ICertificateKeyPair> NewKeyPairRequestAsync(
             ApplicationRecordDataType application,
             string subjectName,
             string[] domainNames,

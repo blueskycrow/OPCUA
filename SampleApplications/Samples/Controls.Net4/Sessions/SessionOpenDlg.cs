@@ -195,18 +195,20 @@ namespace Opc.Ua.Sample.Controls
                 {
                     if (m_checkDomain && sre.StatusCode == StatusCodes.BadCertificateHostNameInvalid)
                     {
-                        StringBuilder buffer = new StringBuilder();
+                        // ignore this error for testing
 
-                        buffer.AppendFormat(sre.Message);
-                        buffer.AppendFormat("\r\n\r\nRetry without certificate hostname validation?");
+                        //StringBuilder buffer = new StringBuilder();
 
-                        DialogResult result = MessageBox.Show(
-                            buffer.ToString(),
-                            "Exception: BadCertificateHostNameInvalid",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Warning);
+                        //buffer.AppendFormat(sre.Message);
+                        //buffer.AppendFormat("\r\n\r\nRetry without certificate hostname validation?");
 
-                        if (result == DialogResult.Yes)
+                        //DialogResult result = MessageBox.Show(
+                        //    buffer.ToString(),
+                        //    "Exception: BadCertificateHostNameInvalid",
+                        //    MessageBoxButtons.YesNo,
+                        //    MessageBoxIcon.Warning);
+
+                        //if (result == DialogResult.Yes)
                         {
                             m_checkDomain = false;
                             OkBTN.Enabled = true;
@@ -214,8 +216,8 @@ namespace Opc.Ua.Sample.Controls
                             return;
                         }
 
-                        DialogResult = DialogResult.OK;
-                        return;
+                        //DialogResult = DialogResult.OK;
+                        //return;
                     }
                 }
 

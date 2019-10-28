@@ -78,7 +78,7 @@ namespace NUnit.Opc.Ua.Gds.Test
             ConnectGDSClient(true);
             RegisterPushServerApplication(_pushClient.PushClient.EndpointUrl);
 
-            _selfSignedServerCert = new X509Certificate2(_pushClient.PushClient.Session.ConfiguredEndpoint.Description.ServerCertificate);
+            _selfSignedServerCert = new ICertificate(_pushClient.PushClient.Session.ConfiguredEndpoint.Description.ServerCertificate);
             _domainNames = Utils.GetDomainsFromCertficate(_selfSignedServerCert).ToArray();
 
             CreateCATestCerts(_pushClient.TempStorePath);
@@ -178,8 +178,8 @@ namespace NUnit.Opc.Ua.Gds.Test
         [Test, Order(301)]
         public void AddRemoveCert()
         {
-            using (X509Certificate2 trustedCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "TrustedCert", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
-            using (X509Certificate2 issuerCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "IssuerCert", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
+            using (ICertificate trustedCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "TrustedCert", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
+            using (ICertificate issuerCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "IssuerCert", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
             {
                 ConnectPushClient(true);
                 TrustListDataType beforeTrustList = _pushClient.PushClient.ReadTrustList();
@@ -303,8 +303,8 @@ namespace NUnit.Opc.Ua.Gds.Test
         public void UpdateCertificateSelfSignedNoPrivateKey()
         {
             ConnectPushClient(true);
-            using (X509Certificate2 invalidCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "TestApp", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
-            using (X509Certificate2 serverCert = new X509Certificate2(_pushClient.PushClient.Session.ConfiguredEndpoint.Description.ServerCertificate))
+            using (ICertificate invalidCert = CertificateFactory.CreateCertificate(null, null, null, "uri:x:y:z", "TestApp", "CN=Push Server Test", null, 2048, DateTime.UtcNow, 1, 256))
+            using (ICertificate serverCert = new ICertificate(_pushClient.PushClient.Session.ConfiguredEndpoint.Description.ServerCertificate))
             {
                 if (!Utils.CompareDistinguishedName(serverCert.Subject, serverCert.Issuer))
                 {
@@ -413,7 +413,7 @@ namespace NUnit.Opc.Ua.Gds.Test
                 Assert.Ignore("Push server doesn't support {0} key update", keyFormat);
             }
 
-            X509Certificate2 newCert = CertificateFactory.CreateCertificate(
+            ICertificate newCert = CertificateFactory.CreateCertificate(
                 null,
                 null,
                 null,
@@ -568,12 +568,12 @@ namespace NUnit.Opc.Ua.Gds.Test
             _gdsClient.GDSClient.Disconnect();
         }
 
-        private X509Certificate2Collection CreateCertCollection(ByteStringCollection certList)
+        private ICertificateCollection CreateCertCollection(ByteStringCollection certList)
         {
-            var result = new X509Certificate2Collection();
+            var result = new ICertificateCollection();
             foreach (var rawCert in certList)
             {
-                result.Add(new X509Certificate2(rawCert));
+                result.Add(new ICertificate(rawCert));
             }
             return result;
         }
@@ -629,18 +629,18 @@ namespace NUnit.Opc.Ua.Gds.Test
         {
             TrustListMasks masks = (TrustListMasks)trustList.SpecifiedLists;
 
-            X509Certificate2Collection issuerCertificates = null;
+            ICertificateCollection issuerCertificates = null;
             List<X509CRL> issuerCrls = null;
-            X509Certificate2Collection trustedCertificates = null;
+            ICertificateCollection trustedCertificates = null;
             List<X509CRL> trustedCrls = null;
 
             // test integrity of all CRLs
             if ((masks & TrustListMasks.IssuerCertificates) != 0)
             {
-                issuerCertificates = new X509Certificate2Collection();
+                issuerCertificates = new ICertificateCollection();
                 foreach (var cert in trustList.IssuerCertificates)
                 {
-                    issuerCertificates.Add(new X509Certificate2(cert));
+                    issuerCertificates.Add(new ICertificate(cert));
                 }
             }
             if ((masks & TrustListMasks.IssuerCrls) != 0)
@@ -653,10 +653,10 @@ namespace NUnit.Opc.Ua.Gds.Test
             }
             if ((masks & TrustListMasks.TrustedCertificates) != 0)
             {
-                trustedCertificates = new X509Certificate2Collection();
+                trustedCertificates = new ICertificateCollection();
                 foreach (var cert in trustList.TrustedCertificates)
                 {
-                    trustedCertificates.Add(new X509Certificate2(cert));
+                    trustedCertificates.Add(new ICertificate(cert));
                 }
             }
             if ((masks & TrustListMasks.TrustedCrls) != 0)
@@ -742,7 +742,7 @@ namespace NUnit.Opc.Ua.Gds.Test
 
         private bool UpdateStoreCertificates(
             string storePath,
-            X509Certificate2Collection updatedCerts)
+            ICertificateCollection updatedCerts)
         {
             bool result = true;
             try
@@ -766,7 +766,7 @@ namespace NUnit.Opc.Ua.Gds.Test
                     }
                     foreach (var cert in updatedCerts)
                     {
-                        store.Add(cert).Wait();
+                        store.Add(new ICertificate(cert)).Wait();
                     }
                 }
             }
@@ -785,7 +785,7 @@ namespace NUnit.Opc.Ua.Gds.Test
             Assert.IsTrue(EraseStore(tempStorePath));
 
             string subjectName = "CN=CA Test Cert, O=OPC Foundation";
-            X509Certificate2 newCACert = CertificateFactory.CreateCertificate(
+            ICertificate newCACert = CertificateFactory.CreateCertificate(
                 CertificateStoreType.Directory,
                 tempStorePath,
                 null,
@@ -851,9 +851,9 @@ namespace NUnit.Opc.Ua.Gds.Test
         private ServerConfigurationPushTestClient _pushClient;
         private ServerCapabilities _serverCapabilities;
         private ApplicationRecordDataType _applicationRecord;
-        private X509Certificate2 _selfSignedServerCert;
+        private ICertificate _selfSignedServerCert;
         private string[] _domainNames;
-        private X509Certificate2 _caCert;
+        private ICertificate _caCert;
         private X509CRL _caCrl;
         #endregion
     }

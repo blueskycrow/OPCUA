@@ -41,7 +41,7 @@ namespace Opc.Ua.Gds.Server
         public NodeId Id { get; set; }
         public NodeId CertificateType { get; set; }
         public CertificateGroupConfiguration Configuration { get; }
-        public X509Certificate2 Certificate { get; set; }
+        public ICertificate Certificate { get; set; }
         public TrustListState DefaultTrustList { get; set; }
         public Boolean UpdateRequired { get; set; }
         #endregion
@@ -69,7 +69,7 @@ namespace Opc.Ua.Gds.Server
 
             using (ICertificateStore store = CertificateStoreIdentifier.OpenStore(m_authoritiesStorePath))
             {
-                X509Certificate2Collection certificates = await store.Enumerate();
+                ICertificateCollection certificates = await store.Enumerate();
                 foreach (var certificate in certificates)
                 {
                     if (Utils.CompareDistinguishedName(certificate.Subject, m_subjectName))
@@ -93,7 +93,7 @@ namespace Opc.Ua.Gds.Server
                                 continue;
                             }
                         }
-                        Certificate = certificate;
+                        Certificate = new ICertificate(certificate);
                     }
                 }
             }
@@ -107,8 +107,8 @@ namespace Opc.Ua.Gds.Server
                     Configuration.CACertificateHashSize,
                     Configuration.CACertificateLifetime
                     );
-                X509Certificate2 newCertificate = await CreateCACertificateAsync(m_subjectName);
-                Certificate = new X509Certificate2(newCertificate.RawData);
+                ICertificate newCertificate = await CreateCACertificateAsync(m_subjectName);
+                Certificate = new ICertificate(newCertificate.RawData);
             }
         }
 
@@ -119,7 +119,7 @@ namespace Opc.Ua.Gds.Server
             return new CertificateGroup(storePath, certificateGroupConfiguration);
         }
 
-        public virtual async Task<X509Certificate2KeyPair> NewKeyPairRequestAsync(
+        public virtual async Task<ICertificateKeyPair> NewKeyPairRequestAsync(
             ApplicationRecordDataType application,
             string subjectName,
             string[] domainNames,
@@ -156,12 +156,12 @@ namespace Opc.Ua.Gds.Server
                 {
                     throw new ServiceResultException(StatusCodes.BadInvalidArgument, "Invalid private key format");
                 }
-                return new X509Certificate2KeyPair(new X509Certificate2(certificate.RawData), privateKeyFormat, privateKey);
+                return new ICertificateKeyPair(new ICertificate(certificate.RawData), privateKeyFormat, privateKey);
             }
         }
 
         public virtual async Task<Opc.Ua.X509CRL> RevokeCertificateAsync(
-            X509Certificate2 certificate)
+            ICertificate certificate)
         {
             return await CertificateFactory.RevokeCertificateAsync(
                 m_authoritiesStorePath,
@@ -208,7 +208,7 @@ namespace Opc.Ua.Gds.Server
         }
 
 
-        public virtual async Task<X509Certificate2> SigningRequestAsync(
+        public virtual async Task<ICertificate> SigningRequestAsync(
             ApplicationRecordDataType application,
             string[] domainNames,
             byte[] certificateRequest)
@@ -275,12 +275,12 @@ namespace Opc.Ua.Gds.Server
 
         }
 
-        public virtual async Task<X509Certificate2> CreateCACertificateAsync(
+        public virtual async Task<ICertificate> CreateCACertificateAsync(
             string subjectName
             )
         {
             DateTime yesterday = DateTime.UtcNow.AddDays(-1);
-            X509Certificate2 newCertificate = CertificateFactory.CreateCertificate(
+            ICertificate newCertificate = CertificateFactory.CreateCertificate(
                 m_authoritiesStoreType,
                 m_authoritiesStorePath,
                 null,
@@ -297,7 +297,7 @@ namespace Opc.Ua.Gds.Server
                 null);
 
             // save only public key
-            Certificate = new X509Certificate2(newCertificate.RawData);
+            Certificate = new ICertificate(newCertificate.RawData);
 
             // initialize revocation list
             await CertificateFactory.RevokeCertificateAsync(m_authoritiesStorePath, newCertificate, null);
@@ -311,7 +311,7 @@ namespace Opc.Ua.Gds.Server
         /// <summary>
         /// load the authority signing key.
         /// </summary>
-        public virtual async Task<X509Certificate2> LoadSigningKeyAsync(X509Certificate2 signingCertificate, string signingKeyPassword)
+        public virtual async Task<ICertificate> LoadSigningKeyAsync(ICertificate signingCertificate, string signingKeyPassword)
         {
             CertificateIdentifier certIdentifier = new CertificateIdentifier(signingCertificate)
             {
@@ -333,28 +333,30 @@ namespace Opc.Ua.Gds.Server
                 using (ICertificateStore authorityStore = CertificateStoreIdentifier.OpenStore(m_authoritiesStorePath))
                 using (ICertificateStore trustedStore = CertificateStoreIdentifier.OpenStore(trustedListStorePath))
                 {
-                    X509Certificate2Collection certificates = await authorityStore.Enumerate();
+                    ICertificateCollection certificates = await authorityStore.Enumerate();
                     foreach (var certificate in certificates)
                     {
                         if (Utils.CompareDistinguishedName(certificate.Subject, m_subjectName))
                         {
-                            X509Certificate2Collection certs = await trustedStore.FindByThumbprint(certificate.Thumbprint);
+                            ICertificateCollection certs = await trustedStore.FindByThumbprint(certificate.Thumbprint);
                             if (certs.Count == 0)
                             {
-                                await trustedStore.Add(new X509Certificate2(certificate.RawData));
+                                await trustedStore.Add(new ICertificate(certificate.RawData));
                             }
 
+                            var certificate2 = new ICertificate(certificate);
+
                             // delete existing CRL in trusted list
-                            foreach (var crl in trustedStore.EnumerateCRLs(certificate, false))
+                            foreach (var crl in trustedStore.EnumerateCRLs(certificate2, false))
                             {
-                                if (crl.VerifySignature(certificate, false))
+                                if (crl.VerifySignature(certificate2, false))
                                 {
                                     trustedStore.DeleteCRL(crl);
                                 }
                             }
 
                             // copy latest CRL to trusted list
-                            foreach (var crl in authorityStore.EnumerateCRLs(certificate, true))
+                            foreach (var crl in authorityStore.EnumerateCRLs(certificate2, true))
                             {
                                 trustedStore.AddCRL(crl);
                             }

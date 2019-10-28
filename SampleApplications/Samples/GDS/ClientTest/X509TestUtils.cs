@@ -40,9 +40,9 @@ namespace Opc.Ua.Gds.Test
     {
         public static void VerifyApplicationCertIntegrity(byte[] certificate, byte[] privateKey, string privateKeyPassword, string privateKeyFormat, byte[][] issuerCertificates)
         {
-            X509Certificate2 newCert = new X509Certificate2(certificate);
+            ICertificate newCert = new ICertificate(certificate);
             Assert.IsNotNull(newCert);
-            X509Certificate2 newPrivateKeyCert = null;
+            ICertificate newPrivateKeyCert = null;
             if (privateKeyFormat == "PFX")
             {
                 newPrivateKeyCert = CertificateFactory.CreateCertificateFromPKCS12(privateKey, privateKeyPassword);
@@ -62,7 +62,7 @@ namespace Opc.Ua.Gds.Test
             CertificateIdentifierCollection issuerCertIdCollection = new CertificateIdentifierCollection();
             foreach (var issuer in issuerCertificates)
             {
-                var issuerCert = new X509Certificate2(issuer);
+                var issuerCert = new ICertificate(issuer);
                 Assert.IsNotNull(issuerCert);
                 issuerCertIdCollection.Add(new CertificateIdentifier(issuerCert));
             }
@@ -84,8 +84,8 @@ namespace Opc.Ua.Gds.Test
 
         public static void VerifySignedApplicationCert(ApplicationTestData testApp, byte [] rawSignedCert, byte [][] rawIssuerCerts)
         {
-            X509Certificate2 signedCert = new X509Certificate2(rawSignedCert);
-            X509Certificate2 issuerCert = new X509Certificate2(rawIssuerCerts[0]);
+            ICertificate signedCert = new ICertificate(rawSignedCert);
+            ICertificate issuerCert = new ICertificate(rawIssuerCerts[0]);
 
             Assert.NotNull(signedCert);
             Assert.False(signedCert.HasPrivateKey);
@@ -144,7 +144,7 @@ namespace Opc.Ua.Gds.Test
             Assert.True(testApp.ApplicationRecord.ApplicationUri == applicationUri);
         }
 
-        private static X509BasicConstraintsExtension FindBasicConstraintsExtension(X509Certificate2 certificate)
+        private static X509BasicConstraintsExtension FindBasicConstraintsExtension(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -157,7 +157,7 @@ namespace Opc.Ua.Gds.Test
             return null;
         }
 
-        private static X509KeyUsageExtension FindKeyUsageExtension(X509Certificate2 certificate)
+        private static X509KeyUsageExtension FindKeyUsageExtension(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -169,7 +169,7 @@ namespace Opc.Ua.Gds.Test
             }
             return null;
         }
-        private static X509EnhancedKeyUsageExtension FindEnhancedKeyUsageExtension(X509Certificate2 certificate)
+        private static X509EnhancedKeyUsageExtension FindEnhancedKeyUsageExtension(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -182,7 +182,7 @@ namespace Opc.Ua.Gds.Test
             return null;
         }
 
-        private static X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(X509Certificate2 certificate)
+        private static X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -201,7 +201,7 @@ namespace Opc.Ua.Gds.Test
             return null;
         }
 
-        private static X509SubjectAltNameExtension FindSubjectAltName(X509Certificate2 certificate)
+        private static X509SubjectAltNameExtension FindSubjectAltName(ICertificate certificate)
         {
             foreach (var extension in certificate.Extensions)
             {
@@ -214,7 +214,7 @@ namespace Opc.Ua.Gds.Test
             return null;
         }
 
-        private static X509SubjectKeyIdentifierExtension FindSubjectKeyIdentifierExtension(X509Certificate2 certificate)
+        private static X509SubjectKeyIdentifierExtension FindSubjectKeyIdentifierExtension(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {

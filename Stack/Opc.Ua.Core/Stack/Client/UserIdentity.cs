@@ -62,7 +62,7 @@ namespace Opc.Ua
         {
             if (certificateId == null) throw new ArgumentNullException("certificateId");
 
-            X509Certificate2 certificate = certificateId.Find().Result;
+            ICertificate certificate = certificateId.Find().Result;
             if (certificate != null)
             {
                 Initialize(certificate);
@@ -72,7 +72,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with an X509 certificate
         /// </summary>
-        public UserIdentity(X509Certificate2 certificate)
+        public UserIdentity(ICertificate certificate)
         {
             if (certificate == null) throw new ArgumentNullException("certificate");
             Initialize(certificate);
@@ -175,7 +175,7 @@ namespace Opc.Ua
                 }
                 else
                 {
-                    X509Certificate2 cert = CertificateFactory.Create(x509Token.CertificateData, true);
+                    ICertificate cert = CertificateFactory.Create(x509Token.CertificateData, true);
                     m_displayName = cert.Subject;
                 }
                 return;
@@ -217,7 +217,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the object with an X509 certificate
         /// </summary>
-        private void Initialize(X509Certificate2 certificate)
+        private void Initialize(ICertificate certificate)
         {
             X509IdentityToken token = new X509IdentityToken();
             token.CertificateData = certificate.RawData;

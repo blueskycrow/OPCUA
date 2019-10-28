@@ -896,6 +896,8 @@ namespace Opc.Ua.Client.Controls
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Aes128_Sha256_nistP256));
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Aes128_Sha256_brainpoolP256r1));
                 SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.Aes256_Sha384_brainpoolP384r1));
+                SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.ChaCha20Poly1305_curve25519));
+                SecurityPolicyCB.Items.Add(SecurityPolicies.GetDisplayName(SecurityPolicies.ChaCha20Poly1305_curve448));
             }
 
             // find all unique security policies.    
@@ -1792,7 +1794,7 @@ namespace Opc.Ua.Client.Controls
 
                     if ((m_currentDescription.ServerCertificate != null) && (m_currentDescription.ServerCertificate.Length > 0))
                     {
-                        X509Certificate2 serverCertificate = new X509Certificate2(m_currentDescription.ServerCertificate);
+                        ICertificate serverCertificate = new ICertificate(m_currentDescription.ServerCertificate);
                         String certificateApplicationUri = Utils.GetApplicationUriFromCertificate(serverCertificate);
 
                         if (certificateApplicationUri != m_currentDescription.Server.ApplicationUri)

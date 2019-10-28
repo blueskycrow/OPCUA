@@ -271,8 +271,8 @@ namespace Opc.Ua.Server
             ServerCertificateGroup certificateGroup = VerifyGroupAndTypeId(certificateGroupId, certificateTypeId);
             certificateGroup.UpdateCertificate = null;
 
-            X509Certificate2Collection newIssuerCollection = new X509Certificate2Collection();
-            X509Certificate2 newCert;
+            ICertificateCollection newIssuerCollection = new ICertificateCollection();
+            ICertificate newCert;
             try
             {
                 // build issuer chain
@@ -280,12 +280,12 @@ namespace Opc.Ua.Server
                 {
                     foreach (byte[] issuerRawCert in issuerCertificates)
                     {
-                        var newIssuerCert = new X509Certificate2(issuerRawCert);
+                        var newIssuerCert = new ICertificate(issuerRawCert);
                         newIssuerCollection.Add(newIssuerCert);
                     }
                 }
 
-                newCert = new X509Certificate2(certificate);
+                newCert = new ICertificate(certificate);
             }
             catch
             {
@@ -315,7 +315,7 @@ namespace Opc.Ua.Server
                     CertificateIdentifierCollection issuerCollection = new CertificateIdentifierCollection();
                     foreach (var issuerCert in newIssuerCollection)
                     {
-                        issuerCollection.Add(new CertificateIdentifier(issuerCert));
+                        issuerCollection.Add(new CertificateIdentifier(new ICertificate(issuerCert)));
                     }
                     issuerStore.TrustedCertificates = issuerCollection;
                     certValidator.Update(issuerStore, issuerStore, null);
@@ -336,13 +336,13 @@ namespace Opc.Ua.Server
                     case null:
                     case "":
                         {
-                            X509Certificate2 certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKey(password).Result;
+                            ICertificate certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKey(password).Result;
                             updateCertificate.CertificateWithPrivateKey = CertificateFactory.CreateCertificateWithPrivateKey(newCert, certWithPrivateKey);
                             break;
                         }
                     case "PFX":
                         {
-                            X509Certificate2 certWithPrivateKey = CertificateFactory.CreateCertificateFromPKCS12(privateKey, password);
+                            ICertificate certWithPrivateKey = CertificateFactory.CreateCertificateFromPKCS12(privateKey, password);
                             updateCertificate.CertificateWithPrivateKey = CertificateFactory.CreateCertificateWithPrivateKey(newCert, certWithPrivateKey);
                             break;
                         }
@@ -391,7 +391,7 @@ namespace Opc.Ua.Server
             // TODO: use nonce for generating the private key
 
             string password = String.Empty;
-            X509Certificate2 certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKey(password).Result;
+            ICertificate certWithPrivateKey = certificateGroup.ApplicationCertificate.LoadPrivateKey(password).Result;
             certificateRequest = CertificateFactory.CreateSigningRequest(certWithPrivateKey, Utils.GetDomainsFromCertficate(certWithPrivateKey));
             return ServiceResult.Good;
         }
@@ -427,7 +427,7 @@ namespace Opc.Ua.Server
                                 {
                                     try
                                     {
-                                        issuerStore.Add(issuer).Wait();
+                                        issuerStore.Add(new ICertificate(issuer)).Wait();
                                     }
                                     catch (ArgumentException)
                                     {
@@ -472,7 +472,7 @@ namespace Opc.Ua.Server
 
             using (ICertificateStore store = CertificateStoreIdentifier.OpenStore(m_rejectedStorePath))
             {
-                X509Certificate2Collection collection = store.Enumerate().Result;
+                ICertificateCollection collection = store.Enumerate().Result;
                 List<byte[]> rawList = new List<byte[]>();
                 foreach (var cert in collection)
                 {
@@ -542,8 +542,8 @@ namespace Opc.Ua.Server
         private class UpdateCertificateData
         {
             public NodeId SessionId;
-            public X509Certificate2 CertificateWithPrivateKey;
-            public X509Certificate2Collection IssuerCollection;
+            public ICertificate CertificateWithPrivateKey;
+            public ICertificateCollection IssuerCollection;
         };
         private class ServerCertificateGroup
         {

@@ -27,12 +27,12 @@ namespace Opc.Ua
         /// Encrypts the token (implemented by the subclass).
         /// </summary>
         public virtual void Encrypt(
-            X509Certificate2 receiverCertificate,
+            ICertificate receiverCertificate,
             byte[] receiverNonce, 
             string securityPolicyUri,
             Nonce receiverEphemeralKey = null, 
-            X509Certificate2 senderCertificate = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate = null,
+            ICertificateCollection senderIssuerCertificates = null,
             bool doNotEncodeSenderCertificate = false)
         {
         }
@@ -42,7 +42,7 @@ namespace Opc.Ua
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
         [Obsolete("Use other overload.")]
-        public virtual void Decrypt(X509Certificate2 certificate, byte[] receiverNonce, string securityPolicyUri)
+        public virtual void Decrypt(ICertificate certificate, byte[] receiverNonce, string securityPolicyUri)
         {
             Decrypt(certificate, Nonce.CreateNonce(securityPolicyUri, receiverNonce), securityPolicyUri, null);
         }
@@ -51,12 +51,12 @@ namespace Opc.Ua
         /// Decrypts the token (implemented by the subclass).
         /// </summary>
         public virtual void Decrypt(
-            X509Certificate2 certificate, 
+            ICertificate certificate, 
             Nonce receiverNonce, 
             string securityPolicyUri,
             Nonce ephemeralKey = null,
-            X509Certificate2 senderCertificate = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate = null,
+            ICertificateCollection senderIssuerCertificates = null,
             CertificateValidator validator = null)
         {
         }
@@ -100,12 +100,12 @@ namespace Opc.Ua
         /// Encrypts the DecryptedPassword using the EncryptionAlgorithm and places the result in Password
         /// </summary>
         public override void Encrypt(
-            X509Certificate2 receiverCertificate,
+            ICertificate receiverCertificate,
             byte[] receiverNonce,
             string securityPolicyUri,
             Nonce receiverEphemeralKey = null,
-            X509Certificate2 senderCertificate  = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate  = null,
+            ICertificateCollection senderIssuerCertificates = null,
             bool doNotEncodeSenderCertificate = false)
         {
             if (m_decryptedPassword == null)
@@ -153,7 +153,7 @@ namespace Opc.Ua
                 {
                     if (senderIssuerCertificates[0].Thumbprint == senderCertificate.Thumbprint)
                     {
-                        var issuers = new X509Certificate2Collection();
+                        var issuers = new ICertificateCollection();
 
                         for (int ii = 1; ii < senderIssuerCertificates.Count; ii++)
                         {
@@ -177,12 +177,12 @@ namespace Opc.Ua
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
         public override void Decrypt(
-            X509Certificate2 certificate,
+            ICertificate certificate,
             Nonce receiverNonce,
             string securityPolicyUri,
             Nonce ephemeralKey = null,
-            X509Certificate2 senderCertificate = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate = null,
+            ICertificateCollection senderIssuerCertificates = null,
             CertificateValidator validator = null)
         {
             // handle no encryption.
@@ -265,7 +265,7 @@ namespace Opc.Ua
         /// <summary>
         /// The certificate associated with the token.
         /// </summary>
-        public X509Certificate2 Certificate
+        public ICertificate Certificate
         {
             get
             {
@@ -285,7 +285,7 @@ namespace Opc.Ua
         /// </summary>
         public override SignatureData Sign(byte[] dataToSign, string securityPolicyUri)
         {
-            X509Certificate2 certificate = m_certificate;
+            ICertificate certificate = m_certificate;
             
             if (certificate == null)
             {   
@@ -307,7 +307,7 @@ namespace Opc.Ua
         /// </summary>
         public override bool Verify(byte[] dataToVerify, SignatureData signatureData, string securityPolicyUri)
         {
-            X509Certificate2 certificate = m_certificate;
+            ICertificate certificate = m_certificate;
             
             if (certificate == null)
             {   
@@ -327,7 +327,7 @@ namespace Opc.Ua
         #endregion
 
         #region Private Fields
-        private X509Certificate2 m_certificate;
+        private ICertificate m_certificate;
         #endregion
     }
 
@@ -369,12 +369,12 @@ namespace Opc.Ua
         /// Encrypts the DecryptedTokenData using the EncryptionAlgorithm and places the result in Password
         /// </summary>
         public override void Encrypt(
-            X509Certificate2 receiverCertificate,
+            ICertificate receiverCertificate,
             byte[] receiverNonce,
             string securityPolicyUri,
             Nonce receiverEphemeralKey = null,
-            X509Certificate2 senderCertificate = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate = null,
+            ICertificateCollection senderIssuerCertificates = null,
             bool doNotEncodeSenderCertificate = false)
         {
             // handle no encryption.
@@ -400,12 +400,12 @@ namespace Opc.Ua
         /// Decrypts the Password using the EncryptionAlgorithm and places the result in DecryptedPassword
         /// </summary>
         public override void Decrypt(
-            X509Certificate2 certificate,
+            ICertificate certificate,
             Nonce receiverNonce,
             string securityPolicyUri,
             Nonce ephemeralKey = null,
-            X509Certificate2 senderCertificate = null,
-            X509Certificate2Collection senderIssuerCertificates = null,
+            ICertificate senderCertificate = null,
+            ICertificateCollection senderIssuerCertificates = null,
             CertificateValidator validator = null)
         {
             // handle no encryption.

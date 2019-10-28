@@ -32,13 +32,14 @@ namespace Opc.Ua.Bindings
             string contextId,
             BufferManager bufferManager,
             ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
+            ICertificate serverCertificate,
             EndpointDescriptionCollection endpoints,
             MessageSecurityMode securityMode,
             string securityPolicyUri)
         :
             this(contextId, bufferManager, quotas, serverCertificate, null, endpoints, securityMode, securityPolicyUri)
-        { }
+        { 
+        }
 
         /// <summary>
         /// Attaches the object to an existing socket.
@@ -47,8 +48,8 @@ namespace Opc.Ua.Bindings
             string contextId,
             BufferManager bufferManager,
             ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
-            X509Certificate2Collection serverCertificateChain,
+            ICertificate serverCertificate,
+            ICertificateCollection serverCertificateChain,
             EndpointDescriptionCollection endpoints,
             MessageSecurityMode securityMode,
             string securityPolicyUri)
@@ -222,6 +223,7 @@ namespace Opc.Ua.Bindings
         /// </summary>
         protected uint GetNewSequenceNumber()
         {
+            m_localSequenceNumber = (uint)m_sequenceNumber;
             return Utils.IncrementIdentifier(ref m_sequenceNumber);
         }
 
@@ -797,6 +799,7 @@ namespace Opc.Ua.Bindings
         private uint m_channelId;
         private string m_globalChannelId;
         private long m_sequenceNumber;
+        private uint m_localSequenceNumber;
         private uint m_remoteSequenceNumber;
         private bool m_sequenceRollover;
         private uint m_partialRequestId;

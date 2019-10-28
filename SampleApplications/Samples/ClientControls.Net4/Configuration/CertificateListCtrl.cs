@@ -82,11 +82,11 @@ namespace Opc.Ua.Client.Controls
         /// <summary>
         /// The currently selected certificate.
         /// </summary>
-        public X509Certificate2 SelectedCertificate
+        public ICertificate SelectedCertificate
         {
             get
             {
-                return SelectedTag as X509Certificate2;
+                return SelectedTag as ICertificate;
             }
         }
 
@@ -137,7 +137,7 @@ namespace Opc.Ua.Client.Controls
             {
                 ListViewItem item = m_items[ii];
 
-                X509Certificate2 certificate = item.Tag as X509Certificate2;
+                ICertificate certificate = item.Tag as ICertificate;
                 
                 if (certificate == null)
                 {
@@ -230,7 +230,7 @@ namespace Opc.Ua.Client.Controls
 
                         foreach (string thumbprint in thumbprints)
                         {
-                            X509Certificate2Collection certificates = await store.FindByThumbprint(thumbprint);
+                            ICertificateCollection certificates = await store.FindByThumbprint(thumbprint);
 
                             if (certificates.Count > 0)
                             {
@@ -244,8 +244,8 @@ namespace Opc.Ua.Client.Controls
                     {
                         Instructions = "No certificates are in the store.";
 
-                        X509Certificate2Collection certificates = await store.Enumerate();
-                        foreach (X509Certificate2 certificate in certificates)
+                        ICertificateCollection certificates = await store.Enumerate();
+                        foreach (ICertificate certificate in certificates)
                         {
                             AddItem(certificate);
                         }
@@ -285,7 +285,7 @@ namespace Opc.Ua.Client.Controls
         /// </summary>
         protected override void UpdateItem(ListViewItem listItem, object item)
         {
-            X509Certificate2 certificate = item as X509Certificate2;
+            ICertificate certificate = item as ICertificate;
 
             if (certificate == null)
             {
@@ -385,7 +385,7 @@ namespace Opc.Ua.Client.Controls
 
             DeleteMI.Enabled = ItemsLV.SelectedItems.Count > 0;
 
-            X509Certificate2 certificate = SelectedTag as X509Certificate2;
+            ICertificate certificate = SelectedTag as ICertificate;
 
             if (certificate != null)
             {
@@ -406,7 +406,7 @@ namespace Opc.Ua.Client.Controls
         {
             try
             {
-                X509Certificate2 certificate = SelectedTag as X509Certificate2;
+                ICertificate certificate = SelectedTag as ICertificate;
 
                 if (certificate != null)
                 {
@@ -456,10 +456,10 @@ namespace Opc.Ua.Client.Controls
                 {
                     for (int ii = 0; ii < ItemsLV.SelectedItems.Count; ii++)
                     {
-                        X509Certificate2 certificate = ItemsLV.SelectedItems[ii].Tag as X509Certificate2;
+                        ICertificate certificate = ItemsLV.SelectedItems[ii].Tag as ICertificate;
 
                         // check for private key.
-                        X509Certificate2Collection certificate2 = await store.FindByThumbprint(certificate.Thumbprint);
+                        ICertificateCollection certificate2 = await store.FindByThumbprint(certificate.Thumbprint);
 
                         if (!yesToAll && (certificate2.Count > 0) && certificate2[0].HasPrivateKey)
                         {
@@ -507,7 +507,7 @@ namespace Opc.Ua.Client.Controls
         {
             try
 			{                
-                X509Certificate2 certificate = SelectedTag as X509Certificate2;
+                ICertificate certificate = SelectedTag as ICertificate;
 
                 if (certificate == null)
                 {

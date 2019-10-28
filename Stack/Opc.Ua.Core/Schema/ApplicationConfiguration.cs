@@ -704,7 +704,8 @@ namespace Opc.Ua
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
-                {
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                    {
                     if (mode == MessageSecurityMode.Sign)
                     {
                         return 4;
@@ -720,7 +721,8 @@ namespace Opc.Ua
 
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
-                {
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
+                    {
                     if (mode == MessageSecurityMode.Sign)
                     {
                         return 5;
@@ -2456,7 +2458,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the identifier with the raw data from a certificate.
         /// </summary>
-        public CertificateIdentifier(X509Certificate2 certificate)
+        public CertificateIdentifier(ICertificate certificate)
         {
             Initialize();
             m_certificate = certificate;
@@ -2465,7 +2467,7 @@ namespace Opc.Ua
         /// <summary>
         /// Initializes the identifier with the raw data from a certificate.
         /// </summary>
-        public CertificateIdentifier(X509Certificate2 certificate, CertificateValidationOptions validationOptions)
+        public CertificateIdentifier(ICertificate certificate, CertificateValidationOptions validationOptions)
         {
             Initialize();
             m_certificate = certificate;
@@ -2670,7 +2672,7 @@ namespace Opc.Ua
         /// The certificate's thumbprint.
         /// </summary>
         /// <value>The thumbprint of a certificate..</value>
-        /// <seealso cref="X509Certificate2"/>
+        /// <seealso cref="ICertificate"/>
         [DataMember(IsRequired = false, EmitDefaultValue = false, Order = 5)]
         public string Thumbprint
         {
@@ -2748,7 +2750,7 @@ namespace Opc.Ua
         private string m_storeName;
         private string m_subjectName;
         private string m_thumbprint;
-        private X509Certificate2 m_certificate;
+        private ICertificate m_certificate;
         private CertificateValidationOptions m_validationOptions;
         #endregion
     }

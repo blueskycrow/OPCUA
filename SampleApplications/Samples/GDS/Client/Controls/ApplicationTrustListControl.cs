@@ -115,7 +115,7 @@ namespace Opc.Ua.Gds.Client
 
             using (DirectoryCertificateStore store = (DirectoryCertificateStore) CertificateStoreIdentifier.OpenStore(storePath))
             {
-                X509Certificate2Collection certificates = await store.Enumerate();
+                ICertificateCollection certificates = await store.Enumerate();
                 foreach (var certificate in certificates)
                 {
                     if (store.GetPrivateKeyFilePath(certificate.Thumbprint) != null)
@@ -204,9 +204,9 @@ namespace Opc.Ua.Gds.Client
                         {
                             foreach (var certificate in trustList.TrustedCertificates)
                             {
-                                var x509 = new X509Certificate2(certificate);
+                                var x509 = new ICertificate(certificate);
 
-                                X509Certificate2Collection certs = store.FindByThumbprint(x509.Thumbprint).Result;
+                                ICertificateCollection certs = store.FindByThumbprint(x509.Thumbprint).Result;
                                 if (certs.Count == 0)
                                 {
                                     store.Add(x509).Wait();
@@ -232,9 +232,9 @@ namespace Opc.Ua.Gds.Client
                         {
                             foreach (var certificate in trustList.IssuerCertificates)
                             {
-                                var x509 = new X509Certificate2(certificate);
+                                var x509 = new ICertificate(certificate);
 
-                                X509Certificate2Collection certs = store.FindByThumbprint(x509.Thumbprint).Result;
+                                ICertificateCollection certs = store.FindByThumbprint(x509.Thumbprint).Result;
                                 if (certs.Count == 0)
                                 {
                                     store.Add(x509).Wait();

@@ -28,7 +28,7 @@ namespace Opc.Ua.Bindings
         /// </summary>
         private static byte[] RsaPkcs15_Sign(
             ArraySegment<byte> dataToSign,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             HashAlgorithmName algorithm)
         {
             RSA rsa = null;
@@ -56,7 +56,7 @@ namespace Opc.Ua.Bindings
         private static bool RsaPkcs15_Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 signingCertificate,
+            ICertificate signingCertificate,
             HashAlgorithmName algorithm)
         {
             RSA rsa = null;
@@ -99,7 +99,7 @@ namespace Opc.Ua.Bindings
         private ArraySegment<byte> Rsa_Encrypt(
             ArraySegment<byte> dataToEncrypt,
             ArraySegment<byte> headerToCopy,
-            X509Certificate2 encryptingCertificate,
+            ICertificate encryptingCertificate,
             bool useOaep)
         {
             RSA rsa = null;
@@ -164,7 +164,7 @@ namespace Opc.Ua.Bindings
         private ArraySegment<byte> Rsa_Decrypt(
             ArraySegment<byte> dataToDecrypt,
             ArraySegment<byte> headerToCopy,
-            X509Certificate2 encryptingCertificate,
+            ICertificate encryptingCertificate,
             bool useOaep)
         {
             RSA rsa = null;

@@ -33,7 +33,7 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             ServiceMessageContext messageContext)
         {
             return Create(configuration, description, endpointConfiguration, clientCertificate, null, messageContext);
@@ -53,8 +53,8 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
-            X509Certificate2 clientCertificate,
-            X509Certificate2Collection clientCertificateChain,
+            ICertificate clientCertificate,
+            ICertificateCollection clientCertificateChain,
             ServiceMessageContext messageContext)
         {
             // create a UA binary channel.

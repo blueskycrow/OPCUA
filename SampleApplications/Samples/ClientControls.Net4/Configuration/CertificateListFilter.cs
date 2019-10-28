@@ -97,7 +97,7 @@ namespace Opc.Ua.Client.Controls
         /// </summary>
         /// <param name="certificate">The certificate.</param>
         /// <returns>True if it meets the criteria.</returns>
-        public bool Match(X509Certificate2 certificate)
+        public bool Match(ICertificate certificate)
         {
             if (certificate == null)
             {

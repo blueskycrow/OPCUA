@@ -783,7 +783,7 @@ namespace Opc.Ua.Gds.Client
         {
             CertificatePublicKeyPathTextBox.Text = AddSpecialFolders(path);
 
-            X509Certificate2 certificate = new X509Certificate2(RemoveSpecialFolders(CertificatePublicKeyPathTextBox.Text));
+            ICertificate certificate = new ICertificate(RemoveSpecialFolders(CertificatePublicKeyPathTextBox.Text));
 
             try
             {
@@ -879,7 +879,7 @@ namespace Opc.Ua.Gds.Client
 
                 CertificatePublicKeyPathTextBox.Text = AddSpecialFolders(dialog.FileName);
                 
-                X509Certificate2 certificate = new X509Certificate2(RemoveSpecialFolders(CertificatePublicKeyPathTextBox.Text));
+                ICertificate certificate = new ICertificate(RemoveSpecialFolders(CertificatePublicKeyPathTextBox.Text));
 
                 try
                 {
@@ -1006,7 +1006,7 @@ namespace Opc.Ua.Gds.Client
 
                 CertificatePublicKeyPathTextBox.Text = AddSpecialFolders(dialog.FileName);
 
-                X509Certificate2 certificate = new X509Certificate2(RemoveSpecialFolders(HttpsCertificatePublicKeyPathTextBox.Text));
+                ICertificate certificate = new ICertificate(RemoveSpecialFolders(HttpsCertificatePublicKeyPathTextBox.Text));
 
                 try
                 {

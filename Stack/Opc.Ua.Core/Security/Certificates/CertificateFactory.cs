@@ -125,13 +125,13 @@ public class CertificateFactory
     /// <param name="encodedData">The encoded data.</param>
     /// <param name="useCache">if set to <c>true</c> the copy of the certificate in the cache is used.</param>
     /// <returns>The certificate.</returns>
-    public static X509Certificate2 Create(byte[] encodedData, bool useCache)
+    public static ICertificate Create(byte[] encodedData, bool useCache)
     {
         if (useCache)
         {
-            return Load(new X509Certificate2(encodedData), false);
+            return Load(new ICertificate(encodedData), false);
         }
-        return new X509Certificate2(encodedData);
+        return new ICertificate(encodedData);
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public class CertificateFactory
     /// operations must be in a key container. 
     /// Private keys stored in a PFX file have no key container by default.
     /// </remarks>
-    public static X509Certificate2 Load(X509Certificate2 certificate, bool ensurePrivateKeyAccessible)
+    public static ICertificate Load(ICertificate certificate, bool ensurePrivateKeyAccessible)
     {
         if (certificate == null)
         {
@@ -154,7 +154,7 @@ public class CertificateFactory
 
         lock (m_certificates)
         {
-            X509Certificate2 cachedCertificate = null;
+            ICertificate cachedCertificate = null;
 
             // check for existing cached certificate.
             if (m_certificates.TryGetValue(certificate.Thumbprint, out cachedCertificate))
@@ -200,7 +200,7 @@ public class CertificateFactory
     /// <param name="isCA">if set to <c>true</c> then a CA certificate is created.</param>
     /// <param name="issuerCAKeyCert">The CA cert with the CA private key.</param>
     /// <returns>The certificate with a private key.</returns>
-    public static X509Certificate2 CreateCertificate(
+    public static ICertificate CreateCertificate(
         string storeType,
         string storePath,
         string password,
@@ -213,7 +213,7 @@ public class CertificateFactory
         ushort lifetimeInMonths,
         ushort hashSizeInBits,
         bool isCA = false,
-        X509Certificate2 issuerCAKeyCert = null,
+        ICertificate issuerCAKeyCert = null,
         byte[] publicKey = null)
     {
         if (issuerCAKeyCert != null)
@@ -359,12 +359,12 @@ public class CertificateFactory
                         new Asn1SignatureFactory(GetRSAHashAlgorithm(hashSizeInBits), signingKey, random);
             Org.BouncyCastle.X509.X509Certificate x509 = cg.Generate(signatureFactory);
 
-            // convert to X509Certificate2
-            X509Certificate2 certificate = null;
+            // convert to ICertificate
+            ICertificate certificate = null;
             if (subjectPrivateKey == null)
             {
                 // create the cert without the private key
-                certificate = new X509Certificate2(x509.GetEncoded());
+                certificate = new ICertificate(x509.GetEncoded());
             }
             else
             {
@@ -400,14 +400,14 @@ public class CertificateFactory
     /// <param name="rawData">The raw PKCS #12 store data.</param>
     /// <param name="password">The password to use to access the store.</param>
     /// <returns>The certificate with a private key.</returns>
-    public static X509Certificate2 CreateCertificateFromPKCS12(
+    public static ICertificate CreateCertificateFromPKCS12(
         byte[] rawData,
         string password
         )
     {
         Exception ex = null;
         int flagsRetryCounter = 0;
-        X509Certificate2 certificate = null;
+        ICertificate certificate = null;
 
         // We need to try MachineKeySet first as UserKeySet in combination with PersistKeySet hangs ASP.Net WebApps on Azure
         X509KeyStorageFlags[] storageFlags = {
@@ -421,13 +421,32 @@ public class CertificateFactory
         {
             try
             {
-                // merge first cert with private key into X509Certificate2
-                certificate = new X509Certificate2(
+                // merge first cert with private key into ICertificate
+                certificate = new ICertificate(
                     rawData,
                     password ?? String.Empty,
                     storageFlags[flagsRetryCounter]);
+
+                // create pkcs12 store for cert and private key
+                using (MemoryStream pfxData = new MemoryStream(rawData))
+                {
+                    Pkcs12StoreBuilder builder = new Pkcs12StoreBuilder();
+                    builder.SetUseDerEncoding(true);
+                    Pkcs12Store pkcsStore = builder.Build();
+                    pkcsStore.Load(pfxData, (password != null) ? password.ToCharArray() : null);
+
+                    foreach (string alias in pkcsStore.Aliases)
+                    {
+                        if (pkcsStore.IsKeyEntry(alias))
+                        {
+                            certificate.BcCertificate = pkcsStore.GetCertificate(alias).Certificate;
+                            certificate.BcPrivateKey = pkcsStore.GetKey(alias).Key;
+                        }
+                    }
+                }
+
                 // can we really access the private key?
-                if (VerifyRSAKeyPair(certificate, certificate, true))
+                // if (VerifyRSAKeyPair(certificate, certificate, true))
                 {
                     return certificate;
                 }
@@ -456,7 +475,7 @@ public class CertificateFactory
     /// </summary>
     public static async Task<X509CRL> RevokeCertificateAsync(
         string storePath,
-        X509Certificate2 certificate,
+        ICertificate certificate,
         string issuerKeyFilePassword = null
         )
     {
@@ -492,7 +511,7 @@ public class CertificateFactory
                 }
             }
 
-            X509Certificate2 certCA = null;
+            ICertificate certCA = null;
             using (ICertificateStore store = CertificateStoreIdentifier.OpenStore(storePath))
             {
                 if (store == null)
@@ -514,7 +533,7 @@ public class CertificateFactory
                 CertificateIdentifier certCAIdentifier = new CertificateIdentifier(certCA);
                 certCAIdentifier.StorePath = storePath;
                 certCAIdentifier.StoreType = CertificateStoreIdentifier.DetermineStoreType(storePath);
-                X509Certificate2 certCAWithPrivateKey = await certCAIdentifier.LoadPrivateKey(issuerKeyFilePassword);
+                ICertificate certCAWithPrivateKey = await certCAIdentifier.LoadPrivateKey(issuerKeyFilePassword);
 
                 if (certCAWithPrivateKey == null)
                 {
@@ -523,7 +542,7 @@ public class CertificateFactory
 
                 List<X509CRL> certCACrl = store.EnumerateCRLs(certCA, false);
 
-                var certificateCollection = new X509Certificate2Collection() { certificate };
+                var certificateCollection = new ICertificateCollection() { certificate };
                 updatedCRL = RevokeCertificate(certCAWithPrivateKey, certCACrl, certificateCollection);
 
                 store.AddCRL(updatedCRL);
@@ -548,9 +567,9 @@ public class CertificateFactory
     /// The CRL number is increased by one and the new CRL is returned.
     /// </summary>
     public static X509CRL RevokeCertificate(
-        X509Certificate2 issuerCertificate,
+        ICertificate issuerCertificate,
         List<X509CRL> issuerCrls,
-        X509Certificate2Collection revokedCertificates
+        ICertificateCollection revokedCertificates
         )
     {
         if (!issuerCertificate.HasPrivateKey)
@@ -603,7 +622,7 @@ public class CertificateFactory
                 // add the revoked cert
                 foreach (var revokedCertificate in revokedCertificates)
                 {
-                    crlGen.AddCrlEntry(GetSerialNumber(revokedCertificate), now, CrlReason.PrivilegeWithdrawn);
+                    crlGen.AddCrlEntry(GetSerialNumber(new ICertificate(revokedCertificate)), now, CrlReason.PrivilegeWithdrawn);
                 }
             }
 
@@ -628,7 +647,7 @@ public class CertificateFactory
     /// Creates a certificate signing request from an existing certificate.
     /// </summary>
     public static byte[] CreateSigningRequest(
-        X509Certificate2 certificate,
+        ICertificate certificate,
         IList<String> domainNames = null
         )
     {
@@ -710,12 +729,12 @@ public class CertificateFactory
     }
 
     /// <summary>
-    /// Create a X509Certificate2 with a private key by combining 
+    /// Create a ICertificate with a private key by combining 
     /// the new certificate with a private key from an existing certificate
     /// </summary>
-    public static X509Certificate2 CreateCertificateWithPrivateKey(
-        X509Certificate2 certificate,
-        X509Certificate2 certificateWithPrivateKey)
+    public static ICertificate CreateCertificateWithPrivateKey(
+        ICertificate certificate,
+        ICertificate certificateWithPrivateKey)
     {
         if (!certificateWithPrivateKey.HasPrivateKey)
         {
@@ -736,11 +755,11 @@ public class CertificateFactory
     }
 
     /// <summary>
-    /// Create a X509Certificate2 with a private key by combining 
+    /// Create a ICertificate with a private key by combining 
     /// the certificate with a private key from a PEM stream
     /// </summary>
-    public static X509Certificate2 CreateCertificateWithPEMPrivateKey(
-        X509Certificate2 certificate,
+    public static ICertificate CreateCertificateWithPEMPrivateKey(
+        ICertificate certificate,
         byte[] pemDataBlob,
         string password = null)
     {
@@ -802,7 +821,7 @@ public class CertificateFactory
     /// <summary>
     /// returns a byte array containing the cert in PEM format.
     /// </summary>
-    public static byte[] ExportCertificateAsPEM(X509Certificate2 certificate)
+    public static byte[] ExportCertificateAsPEM(ICertificate certificate)
     {
         Org.BouncyCastle.X509.X509Certificate bcCert = new Org.BouncyCastle.X509.X509CertificateParser().ReadCertificate(certificate.RawData);
 
@@ -822,7 +841,7 @@ public class CertificateFactory
     /// </summary>
 
     public static byte[] ExportPrivateKeyAsPEM(
-        X509Certificate2 certificate
+        ICertificate certificate
         )
     {
         RsaPrivateCrtKeyParameters keyParameter = GetPrivateKeyParameter(certificate);
@@ -838,7 +857,7 @@ public class CertificateFactory
     /// <summary>
     /// Verify the signature of a self signed certificate.
     /// </summary>
-    public static bool VerifySelfSigned(X509Certificate2 cert)
+    public static bool VerifySelfSigned(ICertificate cert)
     {
         try
         {
@@ -852,7 +871,7 @@ public class CertificateFactory
         return true;
     }
 
-    public static X509KeyUsageFlags GetKeyUsage(X509Certificate2 cert)
+    public static X509KeyUsageFlags GetKeyUsage(ICertificate cert)
     {
         X509KeyUsageFlags allFlags = X509KeyUsageFlags.None;
         foreach (X509KeyUsageExtension ext in cert.Extensions.OfType<X509KeyUsageExtension>())
@@ -866,8 +885,8 @@ public class CertificateFactory
     /// Verify RSA key pair of two certificates.
     /// </summary>
     public static bool VerifyRSAKeyPair(
-        X509Certificate2 certWithPublicKey,
-        X509Certificate2 certWithPrivateKey,
+        ICertificate certWithPublicKey,
+        ICertificate certWithPrivateKey,
         bool throwOnError = false)
     {
         bool result = false;
@@ -1084,9 +1103,9 @@ public class CertificateFactory
     }
 
     /// <summary>
-    /// Get public key parameters from a X509Certificate2
+    /// Get public key parameters from a ICertificate
     /// </summary>
-    private static RsaKeyParameters GetPublicKeyParameter(X509Certificate2 certificate)
+    private static RsaKeyParameters GetPublicKeyParameter(ICertificate certificate)
     {
         RSA rsa = null;
         try
@@ -1108,7 +1127,7 @@ public class CertificateFactory
     /// Get private key parameters from a X509Cerificate2.
     /// The private key must be exportable.
     /// </summary>
-    private static RsaPrivateCrtKeyParameters GetPrivateKeyParameter(X509Certificate2 certificate)
+    private static RsaPrivateCrtKeyParameters GetPrivateKeyParameter(ICertificate certificate)
     {
         RSA rsa = null;
         try
@@ -1136,7 +1155,7 @@ public class CertificateFactory
     /// <summary>
     /// Get the serial number from a certificate as BigInteger.
     /// </summary>
-    private static BigInteger GetSerialNumber(X509Certificate2 certificate)
+    private static BigInteger GetSerialNumber(ICertificate certificate)
     {
         byte[] serialNumber = certificate.GetSerialNumber();
         Array.Reverse(serialNumber);
@@ -1179,7 +1198,7 @@ public class CertificateFactory
     /// <summary>
     /// Determines whether the certificate is issued by a Certificate Authority.
     /// </summary>
-    private static bool IsCertificateAuthority(X509Certificate2 certificate)
+    private static bool IsCertificateAuthority(ICertificate certificate)
     {
         X509BasicConstraintsExtension constraints = null;
 
@@ -1199,19 +1218,19 @@ public class CertificateFactory
     /// <summary>
     /// Get the certificate by issuer and serial number.
     /// </summary>
-    private static async Task<X509Certificate2> FindIssuerCABySerialNumberAsync(
+    private static async Task<ICertificate> FindIssuerCABySerialNumberAsync(
         ICertificateStore store,
         string issuer,
         string serialnumber)
     {
-        X509Certificate2Collection certificates = await store.Enumerate();
+        ICertificateCollection certificates = await store.Enumerate();
 
         foreach (var certificate in certificates)
         {
             if (Utils.CompareDistinguishedName(certificate.Subject, issuer) &&
                 Utils.IsEqual(certificate.SerialNumber, serialnumber))
             {
-                return certificate;
+                return new ICertificate(certificate);
             }
         }
 
@@ -1221,7 +1240,7 @@ public class CertificateFactory
     /// <summary>
     /// Return the authority key identifier in the certificate.
     /// </summary>
-    private static X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(X509Certificate2 certificate)
+    private static X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(ICertificate certificate)
     {
         for (int ii = 0; ii < certificate.Extensions.Count; ii++)
         {
@@ -1241,10 +1260,10 @@ public class CertificateFactory
     }
 
     /// <summary>
-    /// Create a X509Certificate2 with a private key by combining 
+    /// Create a ICertificate with a private key by combining 
     /// a bouncy castle X509Certificate and a private key
     /// </summary>
-    private static X509Certificate2 CreateCertificateWithPrivateKey(
+    private static ICertificate CreateCertificateWithPrivateKey(
         Org.BouncyCastle.X509.X509Certificate certificate,
         string friendlyName,
         AsymmetricKeyParameter privateKey,
@@ -1266,8 +1285,13 @@ public class CertificateFactory
             pkcsStore.SetKeyEntry(friendlyName, new AsymmetricKeyEntry(privateKey), chain);
             pkcsStore.Save(pfxData, passcode.ToCharArray(), random);
 
-            // merge into X509Certificate2
-            return CreateCertificateFromPKCS12(pfxData.ToArray(), passcode);
+            // merge into ICertificate
+            var clone = CreateCertificateFromPKCS12(pfxData.ToArray(), passcode);
+
+            clone.BcCertificate = certificate;
+            clone.BcPrivateKey = privateKey;
+
+            return clone;
         }
     }
 
@@ -1283,7 +1307,6 @@ public class CertificateFactory
         }
         return string.Empty;
     }
-
 
     private static bool VerifyRSAKeyPairCrypt(
         RSA rsaPublicKey,
@@ -1334,7 +1357,7 @@ public class CertificateFactory
 
     #endregion
 
-    private static Dictionary<string, X509Certificate2> m_certificates = new Dictionary<string, X509Certificate2>();
-    private static List<X509Certificate2> m_temporaryKeyContainers = new List<X509Certificate2>();
+    private static Dictionary<string, ICertificate> m_certificates = new Dictionary<string, ICertificate>();
+    private static List<ICertificate> m_temporaryKeyContainers = new List<ICertificate>();
 }
 

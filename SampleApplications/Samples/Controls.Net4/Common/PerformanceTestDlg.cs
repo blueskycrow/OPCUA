@@ -63,7 +63,7 @@ namespace Opc.Ua.Sample.Controls
         private ApplicationConfiguration m_configuration;
         private ConfiguredEndpointCollection m_endpoints;
         private ServiceMessageContext m_messageContext;
-        private X509Certificate2 m_clientCertificate;
+        private ICertificate m_clientCertificate;
         private string m_filePath;
         
         /// <summary>
@@ -72,7 +72,7 @@ namespace Opc.Ua.Sample.Controls
         public EndpointDescription ShowDialog(
             ApplicationConfiguration     configuration,
             ConfiguredEndpointCollection endpoints,
-            X509Certificate2             clientCertificate)
+            ICertificate             clientCertificate)
         {
             m_configuration     = configuration;
             m_endpoints         = endpoints;

@@ -100,17 +100,17 @@ namespace Opc.Ua
             // nothing to do
         }
 
-        public Task<X509Certificate2Collection> Enumerate()
+        public Task<ICertificateCollection> Enumerate()
         {
             using (X509Store store = new X509Store(m_storeName, m_storeLocation))
             {
                 store.Open(OpenFlags.ReadOnly);
-                return Task.FromResult(new X509Certificate2Collection(store.Certificates));
+                return Task.FromResult(new ICertificateCollection(store.Certificates));
             }
         }
 
-        /// <summary cref="ICertificateStore.Add(X509Certificate2)" />
-        public Task Add(X509Certificate2 certificate, string password = null)
+        /// <summary cref="ICertificateStore.Add(ICertificate)" />
+        public Task Add(ICertificate certificate, string password = null)
         {
             if (certificate == null) throw new ArgumentNullException("certificate");
 
@@ -133,7 +133,7 @@ namespace Opc.Ua
             {
                 store.Open(OpenFlags.ReadWrite);
 
-                foreach (X509Certificate2 certificate in store.Certificates)
+                foreach (var certificate in store.Certificates)
                 {
                     if (certificate.Thumbprint == thumbprint)
                     {
@@ -145,19 +145,19 @@ namespace Opc.Ua
             return Task.FromResult(true);
         }
 
-        public Task<X509Certificate2Collection> FindByThumbprint(string thumbprint)
+        public Task<ICertificateCollection> FindByThumbprint(string thumbprint)
         {
             using (X509Store store = new X509Store(m_storeName, m_storeLocation))
             {
                 store.Open(OpenFlags.ReadOnly);
 
-                X509Certificate2Collection collection = new X509Certificate2Collection();
+                ICertificateCollection collection = new ICertificateCollection();
 
-                foreach (X509Certificate2 certificate in store.Certificates)
+                foreach (var certificate in store.Certificates)
                 {
                     if (certificate.Thumbprint == thumbprint)
                     {
-                        collection.Add(certificate);
+                        collection.Add(new ICertificate(certificate));
                     }
                 }
 
@@ -167,7 +167,7 @@ namespace Opc.Ua
 
         public bool SupportsCRLs { get { return false; } }
 
-        public StatusCode IsRevoked(X509Certificate2 issuer, X509Certificate2 certificate)
+        public StatusCode IsRevoked(ICertificate issuer, ICertificate certificate)
         {
             throw new ServiceResultException(StatusCodes.BadNotSupported);
         }
@@ -177,7 +177,7 @@ namespace Opc.Ua
             throw new ServiceResultException(StatusCodes.BadNotSupported);
         }
 
-        public List<X509CRL> EnumerateCRLs(X509Certificate2 issuer, bool validateUpdateTime = true)
+        public List<X509CRL> EnumerateCRLs(ICertificate issuer, bool validateUpdateTime = true)
         {
             throw new ServiceResultException(StatusCodes.BadNotSupported);
         }

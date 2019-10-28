@@ -57,7 +57,7 @@ namespace Opc.Ua.Gds.Client.Controls
             m_dataset.Tables[0].Columns.Add("Status", typeof(Status));
             m_dataset.Tables[0].Columns.Add("ValidTo", typeof(string));
             m_dataset.Tables[0].Columns.Add("Thumbprint", typeof(string));
-            m_dataset.Tables[0].Columns.Add("Certificate", typeof(X509Certificate2));
+            m_dataset.Tables[0].Columns.Add("Certificate", typeof(ICertificate));
             m_dataset.Tables[0].Columns.Add("Icon", typeof(Image));
             m_dataset.Tables[0].Columns.Add("Crls", typeof(List<X509CRL>));
 
@@ -99,13 +99,13 @@ namespace Opc.Ua.Gds.Client.Controls
                 using (ICertificateStore store = CreateStore(trustedStorePath))
                 {
                     X509CertificateCollection certificates = await store.Enumerate();
-                    foreach (X509Certificate2 certificate in certificates)
+                    foreach (ICertificate certificate in certificates)
                     {
                         List<X509CRL> crls = new List<X509CRL>();
 
                         if (store.SupportsCRLs)
                         {
-                            foreach (X509CRL crl in store.EnumerateCRLs(certificate))
+                            foreach (X509CRL crl in store.EnumerateCRLs(new ICertificate(certificate)))
                             {
                                 crls.Add(crl);
                             }
@@ -125,8 +125,8 @@ namespace Opc.Ua.Gds.Client.Controls
                 {
                     using (ICertificateStore store = CreateStore(issuerStorePath))
                     {
-                        X509Certificate2Collection certificates = await store.Enumerate();
-                        foreach (X509Certificate2 certificate in certificates)
+                        ICertificateCollection certificates = await store.Enumerate();
+                        foreach (ICertificate certificate in certificates)
                         {
                             List<X509CRL> crls = new List<X509CRL>();
 
@@ -148,8 +148,8 @@ namespace Opc.Ua.Gds.Client.Controls
             {
                 using (ICertificateStore store = CreateStore(rejectedStorePath))
                 {
-                    X509Certificate2Collection certificates = await store.Enumerate();
-                    foreach (X509Certificate2 certificate in certificates)
+                    ICertificateCollection certificates = await store.Enumerate();
+                    foreach (ICertificate certificate in certificates)
                     {
                         AddCertificate(certificate, Status.Rejected, null);
                     }
@@ -160,7 +160,7 @@ namespace Opc.Ua.Gds.Client.Controls
             NoDataWarningLabel.Visible = CertificatesTable.Rows.Count == 0;
         }
 
-        public void Initialize(TrustListDataType trustList, X509Certificate2Collection rejectedList, bool deleteBeforeAdd)
+        public void Initialize(TrustListDataType trustList, ICertificateCollection rejectedList, bool deleteBeforeAdd)
         {
             if (deleteBeforeAdd)
             {
@@ -173,7 +173,7 @@ namespace Opc.Ua.Gds.Client.Controls
                 {
                     foreach (var certificateBytes in trustList.TrustedCertificates)
                     {
-                        var certificate = new X509Certificate2(certificateBytes);
+                        var certificate = new ICertificate(certificateBytes);
 
                         List<X509CRL> crls = new List<X509CRL>();
 
@@ -199,7 +199,7 @@ namespace Opc.Ua.Gds.Client.Controls
                 {
                     foreach (var certificateBytes in trustList.IssuerCertificates)
                     {
-                        var certificate = new X509Certificate2(certificateBytes);
+                        var certificate = new ICertificate(certificateBytes);
 
                         List<X509CRL> crls = new List<X509CRL>();
 
@@ -224,7 +224,7 @@ namespace Opc.Ua.Gds.Client.Controls
 
             if (rejectedList != null)
             {
-                foreach (X509Certificate2 certificate in rejectedList)
+                foreach (ICertificate certificate in rejectedList)
                 {
                     AddCertificate(certificate, Status.Rejected, null);
                 }
@@ -246,7 +246,7 @@ namespace Opc.Ua.Gds.Client.Controls
                 DataRowView source = row.DataBoundItem as DataRowView;
 
                 Status status = (Status)source.Row[4];
-                X509Certificate2 certificate = source.Row[7] as X509Certificate2;
+                ICertificate certificate = source.Row[7] as ICertificate;
                 List<X509CRL> crls = source.Row[9] as List<X509CRL>;
 
                 if (certificate != null)
@@ -301,7 +301,7 @@ namespace Opc.Ua.Gds.Client.Controls
             }
         }
 
-        private bool IsCA(X509Certificate2 certificate)
+        private bool IsCA(ICertificate certificate)
         {
             foreach (X509Extension extension in certificate.Extensions)
             {
@@ -319,7 +319,7 @@ namespace Opc.Ua.Gds.Client.Controls
             return false;
         }
 
-        private string GetCommonName(X509Certificate2 certificate)
+        private string GetCommonName(ICertificate certificate)
         {
             foreach (string element in Utils.ParseDistinguishedName(certificate.Subject))
             {
@@ -332,7 +332,7 @@ namespace Opc.Ua.Gds.Client.Controls
             return "(unknown)";
         }
 
-        private void AddCertificate(X509Certificate2 certificate, Status status, List<X509CRL> crls)
+        private void AddCertificate(ICertificate certificate, Status status, List<X509CRL> crls)
         {
             DataRow row = CertificatesTable.NewRow();
 
@@ -376,7 +376,7 @@ namespace Opc.Ua.Gds.Client.Controls
                 case Status.Rejected: { oldStorePath = m_rejectedStorePath; break; }
             }
 
-            X509Certificate2 certificate = (X509Certificate2)row[7];
+            ICertificate certificate = (ICertificate)row[7];
 
             if (oldStorePath != targetStorePath)
             {
@@ -409,7 +409,7 @@ namespace Opc.Ua.Gds.Client.Controls
                     {
                         Size = new Size(800, 400)
                     };
-                    dialog.ShowDialog(null, "", new CertificateWrapper() { Certificate = (X509Certificate2)source.Row[7] }, true, this.Text);
+                    dialog.ShowDialog(null, "", new CertificateWrapper() { Certificate = (ICertificate)source.Row[7] }, true, this.Text);
                     break;
                 }
             }
@@ -535,7 +535,7 @@ namespace Opc.Ua.Gds.Client.Controls
 
                 m_certificateFile = new FileInfo(dialog.FileName);
 
-                X509Certificate2 certificate = CertificateFactory.Load(new X509Certificate2(File.ReadAllBytes(dialog.FileName)), false);
+                ICertificate certificate = CertificateFactory.Load(new ICertificate(File.ReadAllBytes(dialog.FileName)), false);
 
                 if (certificate != null)
                 {
@@ -566,12 +566,12 @@ namespace Opc.Ua.Gds.Client.Controls
                     return;
                 }
 
-                X509Certificate2 certificate = null;
+                ICertificate certificate = null;
 
                 foreach (DataGridViewCell cell in CertificateListGridView.SelectedCells)
                 {
                     DataRowView source = CertificateListGridView.Rows[cell.RowIndex].DataBoundItem as DataRowView;
-                    certificate = (X509Certificate2)source.Row[7];
+                    certificate = (ICertificate)source.Row[7];
                     break;
                 }
 
@@ -621,11 +621,11 @@ namespace Opc.Ua.Gds.Client.Controls
 
                     if (isCa == null)
                     {
-                        isCa = IsCA((X509Certificate2)source.Row[7]);
+                        isCa = IsCA((ICertificate)source.Row[7]);
                     }
                     else
                     {
-                        if (!IsCA((X509Certificate2)source.Row[7]))
+                        if (!IsCA((ICertificate)source.Row[7]))
                         {
                             isCa = false;
                         }

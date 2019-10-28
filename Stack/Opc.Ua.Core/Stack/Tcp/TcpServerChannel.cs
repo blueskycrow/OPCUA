@@ -34,7 +34,7 @@ namespace Opc.Ua.Bindings
             UaTcpChannelListener listener,
             BufferManager bufferManager,
             ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
+            ICertificate serverCertificate,
             EndpointDescriptionCollection endpoints)
         :
             this(contextId, listener, bufferManager, quotas, serverCertificate, null, endpoints)
@@ -50,8 +50,8 @@ namespace Opc.Ua.Bindings
             UaTcpChannelListener listener,
             BufferManager bufferManager,
             ChannelQuotas quotas,
-            X509Certificate2 serverCertificate,
-            X509Certificate2Collection serverCertificateChain,
+            ICertificate serverCertificate,
+            ICertificateCollection serverCertificateChain,
             EndpointDescriptionCollection endpoints)
         :
             base(contextId, bufferManager, quotas, serverCertificate, serverCertificateChain, endpoints, MessageSecurityMode.None, SecurityPolicies.None)
@@ -124,7 +124,7 @@ namespace Opc.Ua.Bindings
             IMessageSocket socket,
             uint requestId,
             uint sequenceNumber,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             ChannelToken token,
             OpenSecureChannelRequest request)
         {
@@ -760,7 +760,7 @@ namespace Opc.Ua.Bindings
 
             // parse the security header.
             uint channelId = 0;
-            X509Certificate2 clientCertificate = null;
+            ICertificate clientCertificate = null;
             uint requestId = 0;
             uint sequenceNumber = 0;
 

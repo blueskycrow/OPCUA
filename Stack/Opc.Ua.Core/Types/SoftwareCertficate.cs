@@ -28,13 +28,13 @@ namespace Opc.Ua
         /// <summary>
         /// The SignedSoftwareCertificate that contains the SoftwareCertificate
         /// </summary>
-        public X509Certificate2 SignedCertificate
+        public ICertificate SignedCertificate
         {
             get { return m_signedCertificate;  } 
             set { m_signedCertificate = value; }
         }
 
-        private X509Certificate2 m_signedCertificate;
+        private ICertificate m_signedCertificate;
 
         /// <summary>
         /// Validates a software certificate.
@@ -47,7 +47,7 @@ namespace Opc.Ua
             softwareCertificate = null;
 
             // validate the certificate.
-            X509Certificate2 certificate = null;
+            ICertificate certificate = null;
 
             try
             {

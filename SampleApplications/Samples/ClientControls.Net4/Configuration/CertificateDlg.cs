@@ -61,11 +61,11 @@ namespace Opc.Ua.Client.Controls
             CertificateStoreCTRL.StoreType = null;
             CertificateStoreCTRL.StorePath = null;
             PrivateKeyCB.SelectedIndex = 0;
-            PropertiesCTRL.Initialize((X509Certificate2)null);
+            PropertiesCTRL.Initialize((ICertificate)null);
 
             if (certificateIdentifier != null)
             {
-                X509Certificate2 certificate = await certificateIdentifier.Find();
+                ICertificate certificate = await certificateIdentifier.Find();
 
                 CertificateStoreCTRL.StoreType = certificateIdentifier.StoreType;
                 CertificateStoreCTRL.StorePath = certificateIdentifier.StorePath;
@@ -93,7 +93,7 @@ namespace Opc.Ua.Client.Controls
         /// <summary>
         /// Displays the dialog.
         /// </summary>
-        public bool ShowDialog(X509Certificate2 certificate)
+        public bool ShowDialog(ICertificate certificate)
         {
             CertificateStoreCTRL.StoreType = null;
             CertificateStoreCTRL.StorePath = null;

@@ -36,8 +36,8 @@ namespace Opc.Ua.Security
             string endpointUrl,
             string secureChannelId,
             EndpointDescription endpoint,
-            X509Certificate2 clientCertificate,
-            X509Certificate2 serverCertificate,
+            ICertificate clientCertificate,
+            ICertificate serverCertificate,
             BinaryEncodingSupport encodingSupport)        
         {
             // do nothing if security turned off.

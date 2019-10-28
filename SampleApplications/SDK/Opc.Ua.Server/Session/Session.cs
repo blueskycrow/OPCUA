@@ -64,14 +64,14 @@ namespace Opc.Ua.Server
         public Session(
             OperationContext        context,
             IServerInternal         server,
-            X509Certificate2        serverCertificate,
+            ICertificate        serverCertificate,
             NodeId                  authenticationToken,
             byte[]                  clientNonce,
             Nonce                   serverNonce,
             string                  sessionName, 
             ApplicationDescription  clientDescription,
             string                  endpointUrl,
-            X509Certificate2        clientCertificate,
+            ICertificate        clientCertificate,
             double                  sessionTimeout,
             uint                    maxResponseMessageSize,
             double                  maxRequestAge,
@@ -369,7 +369,7 @@ namespace Opc.Ua.Server
         /// <value>
         /// The server certificate.
         /// </value>
-        public X509Certificate2 ServerCertificate
+        public ICertificate ServerCertificate
         {
             get { return m_serverCertificate; }
         }
@@ -397,7 +397,7 @@ namespace Opc.Ua.Server
         /// <summary>
         /// The application instance certificate associated with the client.
         /// </summary>
-        public X509Certificate2 ClientCertificate
+        public ICertificate ClientCertificate
         {
             get { return m_clientCertificate; }
         }        
@@ -591,7 +591,7 @@ namespace Opc.Ua.Server
                     {
                         // verify for certificate chain in endpoint.
                         // validate the signature with complete chain if the check with leaf certificate failed.
-                        X509Certificate2Collection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.ServerCertificate);
+                        ICertificateCollection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.ServerCertificate);
 
                         if (serverCertificateChain.Count > 1)
                         {
@@ -1097,7 +1097,7 @@ namespace Opc.Ua.Server
                     {
                         // verify for certificate chain in endpoint.
                         // validate the signature with complete chain if the check with leaf certificate failed.
-                        X509Certificate2Collection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.ServerCertificate);
+                        ICertificateCollection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.ServerCertificate);
 
                         if (serverCertificateChain.Count > 1)
                         {
@@ -1250,8 +1250,8 @@ namespace Opc.Ua.Server
         private IUserIdentity m_effectiveIdentity;
         private bool m_activated;
         
-        private X509Certificate2 m_clientCertificate;
-        private X509Certificate2Collection m_clientIssuerCertificates;
+        private ICertificate m_clientCertificate;
+        private ICertificateCollection m_clientIssuerCertificates;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
         private List<SoftwareCertificate> m_softwareCertificates;
@@ -1260,7 +1260,7 @@ namespace Opc.Ua.Server
         private string m_sessionName;
         private string m_secureChannelId;
         private EndpointDescription m_endpoint;
-        private X509Certificate2 m_serverCertificate;
+        private ICertificate m_serverCertificate;
         private byte[] m_serverCertificateChain;
         private string m_eccUserTokenSecurityPolicyUri;
         private Nonce m_eccUserTokenNonce;

@@ -309,7 +309,7 @@ namespace Opc.Ua.Client.Controls
                     {
                         for (int ii = 0; ii < certificates.Length; ii++)
                         {
-                            X509Certificate2 certificate = certificates[ii] as X509Certificate2;
+                            ICertificate certificate = certificates[ii] as ICertificate;
 
                             if (certificate != null)
                             {

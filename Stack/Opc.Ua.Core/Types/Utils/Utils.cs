@@ -2536,7 +2536,7 @@ namespace Opc.Ua
         /// <summary>
         /// Creates a X509 certificate object from the DER encoded bytes.
         /// </summary>
-        public static X509Certificate2 ParseCertificateBlob(byte[] certificateData)
+        public static ICertificate ParseCertificateBlob(byte[] certificateData)
         {
             try
             {
@@ -2556,11 +2556,11 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificateData">The certificate data.</param>
         /// <returns></returns>
-        public static X509Certificate2Collection ParseCertificateChainBlob(byte[] certificateData)
+        public static ICertificateCollection ParseCertificateChainBlob(byte[] certificateData)
         {
-            X509Certificate2Collection certificateChain = new X509Certificate2Collection();
+            ICertificateCollection certificateChain = new ICertificateCollection();
             List<byte> certificatesBytes = new List<byte>(certificateData);
-            X509Certificate2 certificate = null;
+            ICertificate certificate = null;
 
             while (certificatesBytes.Count > 0)
             {
@@ -2909,7 +2909,7 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificate">The certificate.</param>
         /// <returns>The DNS names.</returns>
-        public static IList<string> GetDomainsFromCertficate(X509Certificate2 certificate)
+        public static IList<string> GetDomainsFromCertficate(ICertificate certificate)
         {
             List<string> dnsNames = new List<string>();
 
@@ -2992,7 +2992,7 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificate">The certificate.</param>
         /// <returns>The application URI.</returns>
-        public static string GetApplicationUriFromCertificate(X509Certificate2 certificate)
+        public static string GetApplicationUriFromCertificate(ICertificate certificate)
         {
             // extract the alternate domains from the subject alternate name extension.
             X509SubjectAltNameExtension alternateName = null;
@@ -3020,7 +3020,7 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificate">The certificate.</param>
         /// <returns>true if the application URI starts with urn: </returns>
-        public static bool HasApplicationURN(X509Certificate2 certificate)
+        public static bool HasApplicationURN(ICertificate certificate)
         {
             // extract the alternate domains from the subject alternate name extension.
             X509SubjectAltNameExtension alternateName = null;
@@ -3056,7 +3056,7 @@ namespace Opc.Ua
         /// <param name="certificate">The certificate.</param>
         /// <param name="endpointUrl">The endpoint url to verify.</param>
         /// <returns>True if the certificate matches the url.</returns>
-        public static bool DoesUrlMatchCertificate(X509Certificate2 certificate, Uri endpointUrl)
+        public static bool DoesUrlMatchCertificate(ICertificate certificate, Uri endpointUrl)
         {
             if (endpointUrl == null || certificate == null)
             {
@@ -3116,7 +3116,7 @@ namespace Opc.Ua
         /// <summary>
         /// Compares two distinguished names.
         /// </summary>
-        public static bool CompareDistinguishedName(X509Certificate2 certificate, List<string> parsedName)
+        public static bool CompareDistinguishedName(ICertificate certificate, List<string> parsedName)
         {
             // can't compare if the number of fields is 0.
             if (parsedName.Count == 0)

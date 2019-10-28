@@ -74,14 +74,14 @@ namespace Opc.Ua.Client
         /// <remarks>
         /// The application configuration is used to look up the certificate if none is provided.
         /// The clientCertificate must have the private key. This will require that the certificate
-        /// be loaded from a certicate store. Converting a DER encoded blob to a X509Certificate2
+        /// be loaded from a certicate store. Converting a DER encoded blob to a ICertificate
         /// will not include a private key.
         /// </remarks>
         public Session(
             ITransportChannel channel,
             ApplicationConfiguration configuration,
             ConfiguredEndpoint endpoint,
-            X509Certificate2 clientCertificate)
+            ICertificate clientCertificate)
         :
             base(channel)
         {
@@ -92,7 +92,7 @@ namespace Opc.Ua.Client
             ITransportChannel channel,
             ApplicationConfiguration configuration,
             ConfiguredEndpoint endpoint,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             EndpointDescriptionCollection availableEndpoints)
             :
                 base(channel)
@@ -148,7 +148,7 @@ namespace Opc.Ua.Client
             ITransportChannel channel,
             ApplicationConfiguration configuration,
             ConfiguredEndpoint endpoint,
-            X509Certificate2 clientCertificate)
+            ICertificate clientCertificate)
         {
             Initialize();
 
@@ -199,7 +199,7 @@ namespace Opc.Ua.Client
                 }
 
                 // load certificate chain.
-                m_instanceCertificateChain = new X509Certificate2Collection(m_instanceCertificate);
+                m_instanceCertificateChain = new ICertificateCollection(m_instanceCertificate);
                 List<CertificateIdentifier> issuers = new List<CertificateIdentifier>();
                 configuration.CertificateValidator.GetIssuers(m_instanceCertificate, issuers).Wait();
 
@@ -277,7 +277,7 @@ namespace Opc.Ua.Client
         {
             bool domainFound = false;
 
-            X509Certificate2 serverCertificate = new X509Certificate2(endpoint.Description.ServerCertificate);
+            ICertificate serverCertificate = new ICertificate(endpoint.Description.ServerCertificate);
 
             // check the certificate domains.
             IList<string> domains = Utils.GetDomainsFromCertficate(serverCertificate);
@@ -833,8 +833,8 @@ namespace Opc.Ua.Client
                 CheckCertificateDomain(endpoint);
             }
 
-            X509Certificate2 clientCertificate = null;
-            X509Certificate2Collection clientCertificateChain = null;
+            ICertificate clientCertificate = null;
+            ICertificateCollection clientCertificateChain = null;
 
             if (endpointDescription.SecurityPolicyUri != SecurityPolicies.None)
             {
@@ -853,7 +853,7 @@ namespace Opc.Ua.Client
                 // load certificate chain.
                 if (configuration.SecurityConfiguration.SendCertificateChain)
                 {
-                    clientCertificateChain = new X509Certificate2Collection(clientCertificate);
+                    clientCertificateChain = new ICertificateCollection(clientCertificate);
                     List<CertificateIdentifier> issuers = new List<CertificateIdentifier>();
                     await configuration.CertificateValidator.GetIssuers(clientCertificate, issuers);
 
@@ -2043,12 +2043,12 @@ namespace Opc.Ua.Client
             }
 
             // validate the server certificate /certificate chain.
-            X509Certificate2 serverCertificate = null;
+            ICertificate serverCertificate = null;
             byte[] certificateData = m_endpoint.Description.ServerCertificate;
 
             if (certificateData != null && certificateData.Length > 0 && requireEncryption)
             {
-                X509Certificate2Collection serverCertificateChain = Utils.ParseCertificateChainBlob(certificateData);
+                ICertificateCollection serverCertificateChain = Utils.ParseCertificateChainBlob(certificateData);
 
                 if (serverCertificateChain.Count > 0)
                 {
@@ -2208,7 +2208,7 @@ namespace Opc.Ua.Client
                     try
                     {
                         // verify for certificate chain in endpoint.
-                        X509Certificate2Collection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.Description.ServerCertificate);
+                        ICertificateCollection serverCertificateChain = Utils.ParseCertificateChainBlob(m_endpoint.Description.ServerCertificate);
 
                         if (serverCertificateChain.Count > 0 && !Utils.IsEqual(serverCertificateData, serverCertificateChain[0].RawData))
                         {
@@ -4253,8 +4253,8 @@ namespace Opc.Ua.Client
         private NodeCache m_nodeCache;
         private ApplicationConfiguration m_configuration;
         private ConfiguredEndpoint m_endpoint;
-        private X509Certificate2 m_instanceCertificate;
-        private X509Certificate2Collection m_instanceCertificateChain;
+        private ICertificate m_instanceCertificate;
+        private ICertificateCollection m_instanceCertificateChain;
         private bool m_checkDomain;
         private List<IUserIdentity> m_identityHistory;
 
@@ -4264,7 +4264,7 @@ namespace Opc.Ua.Client
         private byte[] m_serverNonce;
         private string m_userTokenSecurityPolicyUri;
         private Nonce m_eccServerEphermalKey;
-        private X509Certificate2 m_serverCertificate;
+        private ICertificate m_serverCertificate;
         private long m_publishCounter;
         private DateTime m_lastKeepAliveTime;
         private ServerState m_serverState;

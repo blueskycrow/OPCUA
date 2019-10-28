@@ -40,7 +40,7 @@ namespace Opc.Ua.Gds.Client.Controls
             Icon = ImageListControl.AppIcon;
         }
 
-        public DialogResult ShowDialog(IWin32Window owner, X509Certificate2 certificate)
+        public DialogResult ShowDialog(IWin32Window owner, ICertificate certificate)
         {
             CertificateValueControl.ShowValue(null, null, new CertificateWrapper() { Certificate = certificate }, true);
  

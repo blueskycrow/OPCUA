@@ -77,6 +77,16 @@ namespace Opc.Ua
         /// The URI for the Aes256_Sha384_brainpoolP384r1 security policy.
         /// </summary>
         public const string Aes256_Sha384_brainpoolP384r1 = BaseUri + "Aes256_Sha384_brainpoolP384r1";
+
+        /// <summary>
+        /// The URI for the ChaCha20Poly1305_curve25519 security policy.
+        /// </summary>
+        public const string ChaCha20Poly1305_curve25519 = BaseUri + "ChaCha20Poly1305_curve25519";
+
+        /// <summary>
+        /// The URI for the ChaCha20Poly1305_curve448 security policy.
+        /// </summary>
+        public const string ChaCha20Poly1305_curve448 = BaseUri + "ChaCha20Poly1305_curve448";
         #endregion
 
         #region Static Methods
@@ -138,7 +148,7 @@ namespace Opc.Ua
         /// <summary>
         /// Encrypts the text using the SecurityPolicyUri and returns the result.
         /// </summary>
-        public static EncryptedData Encrypt(X509Certificate2 certificate, string securityPolicyUri, byte[] plainText)
+        public static EncryptedData Encrypt(ICertificate certificate, string securityPolicyUri, byte[] plainText)
         {
             EncryptedData encryptedData = new EncryptedData();
 
@@ -179,6 +189,8 @@ namespace Opc.Ua
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return encryptedData;
                 }
@@ -203,7 +215,7 @@ namespace Opc.Ua
         /// <summary>
         /// Decrypts the CipherText using the SecurityPolicyUri and returns the PlainTetx.
         /// </summary>
-        public static byte[] Decrypt(X509Certificate2 certificate, string securityPolicyUri, EncryptedData dataToDecrypt)
+        public static byte[] Decrypt(ICertificate certificate, string securityPolicyUri, EncryptedData dataToDecrypt)
         {
             // check if nothing to do.
             if (dataToDecrypt == null)
@@ -245,6 +257,8 @@ namespace Opc.Ua
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 case SecurityPolicies.None:
                 {
                     if (String.IsNullOrEmpty(dataToDecrypt.Algorithm))
@@ -273,7 +287,7 @@ namespace Opc.Ua
         /// <summary>
         /// Signs the data using the SecurityPolicyUri and returns the signature.
         /// </summary>
-        public static SignatureData Sign(X509Certificate2 certificate, string securityPolicyUri, byte[] dataToSign)
+        public static SignatureData Sign(ICertificate certificate, string securityPolicyUri, byte[] dataToSign)
         {
             SignatureData signatureData = new SignatureData();
 
@@ -309,6 +323,8 @@ namespace Opc.Ua
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     signatureData.Algorithm = null;
                     signatureData.Signature = EccUtils.Sign(new ArraySegment<byte>(dataToSign), certificate, HashAlgorithmName.SHA256);
@@ -345,7 +361,7 @@ namespace Opc.Ua
         /// <summary>
         /// Verifies the signature using the SecurityPolicyUri and return true if valid.
         /// </summary>
-        public static bool Verify(X509Certificate2 certificate, string securityPolicyUri, byte[] dataToVerify, SignatureData signature)
+        public static bool Verify(ICertificate certificate, string securityPolicyUri, byte[] dataToVerify, SignatureData signature)
         {
             // check if nothing to do.
             if (signature == null)
@@ -385,6 +401,8 @@ namespace Opc.Ua
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return EccUtils.Verify(new ArraySegment<byte>(dataToVerify), signature.Signature, certificate, HashAlgorithmName.SHA256);
                 }

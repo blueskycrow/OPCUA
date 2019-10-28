@@ -127,7 +127,7 @@ namespace Opc.Ua.Server
                 {
                     if ((masks & TrustListMasks.TrustedCertificates) != 0)
                     {
-                        X509Certificate2Collection certificates = store.Enumerate().Result;
+                        ICertificateCollection certificates = store.Enumerate().Result;
                         foreach (var certificate in certificates)
                         {
                             trustList.TrustedCertificates.Add(certificate.RawData);
@@ -147,7 +147,7 @@ namespace Opc.Ua.Server
                 {
                     if ((masks & TrustListMasks.IssuerCertificates) != 0)
                     {
-                        X509Certificate2Collection certificates = store.Enumerate().Result;
+                        ICertificateCollection certificates = store.Enumerate().Result;
                         foreach (var certificate in certificates)
                         {
                             trustList.IssuerCertificates.Add(certificate.RawData);
@@ -306,18 +306,18 @@ namespace Opc.Ua.Server
                     TrustListDataType trustList = DecodeTrustListData(context, m_strm);
                     TrustListMasks masks = (TrustListMasks)trustList.SpecifiedLists;
 
-                    X509Certificate2Collection issuerCertificates = null;
+                    ICertificateCollection issuerCertificates = null;
                     List<X509CRL> issuerCrls = null;
-                    X509Certificate2Collection trustedCertificates = null;
+                    ICertificateCollection trustedCertificates = null;
                     List<X509CRL> trustedCrls = null;
 
                     // test integrity of all CRLs
                     if ((masks & TrustListMasks.IssuerCertificates) != 0)
                     {
-                        issuerCertificates = new X509Certificate2Collection();
+                        issuerCertificates = new ICertificateCollection();
                         foreach (var cert in trustList.IssuerCertificates)
                         {
-                            issuerCertificates.Add(new X509Certificate2(cert));
+                            issuerCertificates.Add(new ICertificate(cert));
                         }
                     }
                     if ((masks & TrustListMasks.IssuerCrls) != 0)
@@ -330,10 +330,10 @@ namespace Opc.Ua.Server
                     }
                     if ((masks & TrustListMasks.TrustedCertificates) != 0)
                     {
-                        trustedCertificates = new X509Certificate2Collection();
+                        trustedCertificates = new ICertificateCollection();
                         foreach (var cert in trustList.TrustedCertificates)
                         {
-                            trustedCertificates.Add(new X509Certificate2(cert));
+                            trustedCertificates.Add(new ICertificate(cert));
                         }
                     }
                     if ((masks & TrustListMasks.TrustedCrls) != 0)
@@ -422,11 +422,11 @@ namespace Opc.Ua.Server
                     return StatusCodes.BadInvalidArgument;
                 }
 
-                X509Certificate2 cert = null;
+                ICertificate cert = null;
                 X509CRL crl = null;
                 try
                 {
-                    cert = new X509Certificate2(certificate);
+                    cert = new ICertificate(certificate);
                 }
                 catch
                 {
@@ -496,7 +496,7 @@ namespace Opc.Ua.Server
                         foreach (var cert in certCollection)
                         {
                             if (Utils.CompareDistinguishedName(cert.Subject, crl.Issuer) &&
-                                crl.VerifySignature(cert, false))
+                                crl.VerifySignature(new ICertificate(cert), false))
                             {
                                 crlsToDelete.Add(crl);
                                 break;
@@ -600,7 +600,7 @@ namespace Opc.Ua.Server
 
         private bool UpdateStoreCertificates(
             string storePath,
-            X509Certificate2Collection updatedCerts)
+            ICertificateCollection updatedCerts)
         {
             bool result = true;
             try
@@ -624,7 +624,7 @@ namespace Opc.Ua.Server
                     }
                     foreach (var cert in updatedCerts)
                     {
-                        store.Add(cert).Wait();
+                        store.Add(new ICertificate(cert)).Wait();
                     }
                 }
             }

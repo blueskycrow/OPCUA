@@ -85,7 +85,7 @@ namespace Opc.Ua.Gds.Client
             return privateKeyFormat;
         }
 
-        public List<string> GetDomainNames(X509Certificate2 certificate)
+        public List<string> GetDomainNames(ICertificate certificate)
         {
             List<string> domainNames = new List<string>();
 

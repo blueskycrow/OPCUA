@@ -52,7 +52,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// The certificate for the server.
         /// </summary>
-        protected X509Certificate2 ServerCertificate
+        protected ICertificate ServerCertificate
         {
             get { return m_serverCertificate; }
         }
@@ -60,7 +60,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// The server certificate chain.
         /// </summary>
-        protected X509Certificate2Collection ServerCertificateChain
+        protected ICertificateCollection ServerCertificateChain
         {
             get { return m_serverCertificateChain; }
             set { m_serverCertificateChain = value; }
@@ -96,7 +96,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// The certificate for the client.
         /// </summary>
-        protected X509Certificate2 ClientCertificate
+        protected ICertificate ClientCertificate
         {
             get { return m_clientCertificate; }
             set { m_clientCertificate = value; }
@@ -105,7 +105,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// The client certificate chain.
         /// </summary>
-        internal X509Certificate2Collection ClientCertificateChain
+        internal ICertificateCollection ClientCertificateChain
         {
             get { return m_clientCertificateChain; }
             set { m_clientCertificateChain = value; }
@@ -154,7 +154,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Compares two certificates.
         /// </summary>
-        protected static void CompareCertificates(X509Certificate2 expected, X509Certificate2 actual, bool allowNull)
+        protected static void CompareCertificates(ICertificate expected, ICertificate actual, bool allowNull)
         {
             bool equal = true;
 
@@ -221,6 +221,16 @@ namespace Opc.Ua.Bindings
                     return 96;
                 }
 
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                {
+                    return 32;
+                }
+
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
+                {
+                    return 56;
+                }
+
                 default:
                 case SecurityPolicies.None:
                 {
@@ -232,7 +242,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Validates the nonce.
         /// </summary>
-        protected byte[] CreateNonce(X509Certificate2 certificate)
+        protected byte[] CreateNonce(ICertificate certificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -254,6 +264,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     m_localNonce = Nonce.CreateNonce(SecurityPolicyUri, GetNonceLength());
                     return m_localNonce.Data;
@@ -272,7 +284,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Validates the nonce.
         /// </summary>
-        protected bool ValidateNonce(X509Certificate2 certificate, byte[] nonce)
+        protected bool ValidateNonce(ICertificate certificate, byte[] nonce)
         {
             // no nonce needed for no security.
             if (SecurityMode == MessageSecurityMode.None)
@@ -308,6 +320,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     m_remoteNonce = Nonce.CreateNonce(SecurityPolicyUri, nonce);
                     return true;
@@ -320,7 +334,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Returns the plain text block size for key in the specified certificate.
         /// </summary>
-        protected int GetPlainTextBlockSize(X509Certificate2 receiverCertificate)
+        protected int GetPlainTextBlockSize(ICertificate receiverCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -339,6 +353,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return 1;
                 }
@@ -354,7 +370,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Returns the cipher text block size for key in the specified certificate.
         /// </summary>
-        protected int GetCipherTextBlockSize(X509Certificate2 receiverCertificate)
+        protected int GetCipherTextBlockSize(ICertificate receiverCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -373,6 +389,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return 1;
                 }
@@ -390,7 +408,7 @@ namespace Opc.Ua.Bindings
         /// </summary>
         protected int GetAsymmetricHeaderSize(
             string securityPolicyUri,
-            X509Certificate2 senderCertificate)
+            ICertificate senderCertificate)
         {
             int headerSize = 0;
 
@@ -425,7 +443,7 @@ namespace Opc.Ua.Bindings
 
         protected int GetAsymmetricHeaderSize(
             string securityPolicyUri,
-            X509Certificate2 senderCertificate,
+            ICertificate senderCertificate,
             int senderCertificateSize)
         {
             int headerSize = 0;
@@ -462,7 +480,7 @@ namespace Opc.Ua.Bindings
         /// <summary>
         /// Calculates the size of the footer with an asymmetric signature.
         /// </summary>
-        protected int GetAsymmetricSignatureSize(X509Certificate2 senderCertificate)
+        protected int GetAsymmetricSignatureSize(ICertificate senderCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -477,6 +495,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return EccUtils.GetSignatureLength(senderCertificate);
                 }
@@ -497,8 +517,8 @@ namespace Opc.Ua.Bindings
             uint messageType,
             uint secureChannelId,
             string securityPolicyUri,
-            X509Certificate2 senderCertificate,
-            X509Certificate2 receiverCertificate)
+            ICertificate senderCertificate,
+            ICertificate receiverCertificate)
         {
             int senderCertificateSize = 0;
 
@@ -521,9 +541,9 @@ namespace Opc.Ua.Bindings
             uint messageType,
             uint secureChannelId,
             string securityPolicyUri,
-            X509Certificate2 senderCertificate,
-            X509Certificate2Collection senderCertificateChain,
-            X509Certificate2 receiverCertificate,
+            ICertificate senderCertificate,
+            ICertificateCollection senderCertificateChain,
+            ICertificate receiverCertificate,
             out int senderCertificateSize)
         {
             int start = encoder.Position;
@@ -538,7 +558,7 @@ namespace Opc.Ua.Bindings
             {
                 if (senderCertificateChain != null && senderCertificateChain.Count >0)
                 {
-                    X509Certificate2 currentCertificate = senderCertificateChain[0];
+                    ICertificate currentCertificate = senderCertificateChain[0];
                     int maxSenderCertificateSize = GetMaxSenderCertificateSize(currentCertificate, securityPolicyUri);
                     List<byte> senderCertificateList = new List<byte>(currentCertificate.RawData);
                     senderCertificateSize = currentCertificate.RawData.Length;
@@ -584,7 +604,7 @@ namespace Opc.Ua.Bindings
             }
         }
 
-        private int GetMaxSenderCertificateSize(X509Certificate2 senderCertificate, string securityPolicyUri)
+        private int GetMaxSenderCertificateSize(ICertificate senderCertificate, string securityPolicyUri)
         {
             int occupiedSize = TcpMessageLimits.BaseHeaderSize //base header size
                 + TcpMessageLimits.StringLengthSize;           //security policy uri length
@@ -613,8 +633,8 @@ namespace Opc.Ua.Bindings
         protected BufferCollection WriteAsymmetricMessage(
             uint messageType,
             uint requestId,
-            X509Certificate2 senderCertificate,
-            X509Certificate2 receiverCertificate,
+            ICertificate senderCertificate,
+            ICertificate receiverCertificate,
             ArraySegment<byte> messageBody)
         {
             return WriteAsymmetricMessage(messageType, requestId, senderCertificate, null, receiverCertificate, messageBody);
@@ -626,9 +646,9 @@ namespace Opc.Ua.Bindings
         protected BufferCollection WriteAsymmetricMessage(
             uint messageType,
             uint requestId,
-            X509Certificate2 senderCertificate,
-            X509Certificate2Collection senderCertificateChain,
-            X509Certificate2 receiverCertificate,
+            ICertificate senderCertificate,
+            ICertificateCollection senderCertificateChain,
+            ICertificate receiverCertificate,
             ArraySegment<byte> messageBody)
         {
             bool success = false;
@@ -830,9 +850,9 @@ namespace Opc.Ua.Bindings
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1804:RemoveUnusedLocals", MessageId = "messageType"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1804:RemoveUnusedLocals", MessageId = "messageSize")]
         protected void ReadAsymmetricMessageHeader(
             BinaryDecoder decoder,
-            X509Certificate2 receiverCertificate,
+            ICertificate receiverCertificate,
             out uint secureChannelId, 
-            out X509Certificate2Collection senderCertificateChain,
+            out ICertificateCollection senderCertificateChain,
             out string securityPolicyUri)
         {
             senderCertificateChain = null;
@@ -975,16 +995,16 @@ namespace Opc.Ua.Bindings
         /// </summary>
         protected ArraySegment<byte> ReadAsymmetricMessage(
             ArraySegment<byte> buffer,
-            X509Certificate2 receiverCertificate,
+            ICertificate receiverCertificate,
             out uint channelId,
-            out X509Certificate2 senderCertificate,
+            out ICertificate senderCertificate,
             out uint requestId,
             out uint sequenceNumber)
         {
             BinaryDecoder decoder = new BinaryDecoder(buffer.Array, buffer.Offset, buffer.Count, Quotas.MessageContext);
 
             string securityPolicyUri = null;
-            X509Certificate2Collection senderCertificateChain;
+            ICertificateCollection senderCertificateChain;
 
             // parse the security header.
             ReadAsymmetricMessageHeader(
@@ -1163,7 +1183,7 @@ namespace Opc.Ua.Bindings
         /// </remarks>
         protected byte[] Sign(
             ArraySegment<byte> dataToSign,
-            X509Certificate2 senderCertificate)
+            ICertificate senderCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -1187,6 +1207,8 @@ namespace Opc.Ua.Bindings
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return EccUtils.Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA256);
                 }
@@ -1210,7 +1232,7 @@ namespace Opc.Ua.Bindings
         protected bool Verify(
             ArraySegment<byte> dataToVerify,
             byte[] signature,
-            X509Certificate2 senderCertificate)
+            ICertificate senderCertificate)
         {
             // verify signature.
             switch (SecurityPolicyUri)
@@ -1233,6 +1255,8 @@ namespace Opc.Ua.Bindings
 
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     return EccUtils.Verify(dataToVerify, signature, senderCertificate, HashAlgorithmName.SHA256);
                 }
@@ -1261,7 +1285,7 @@ namespace Opc.Ua.Bindings
         protected ArraySegment<byte> Encrypt(
             ArraySegment<byte> dataToEncrypt,
             ArraySegment<byte> headerToCopy,
-            X509Certificate2 receiverCertificate)
+            ICertificate receiverCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -1271,6 +1295,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     byte[] encryptedBuffer = BufferManager.TakeBuffer(SendBufferSize, "Encrypt");
 
@@ -1303,7 +1329,7 @@ namespace Opc.Ua.Bindings
         protected ArraySegment<byte> Decrypt(
             ArraySegment<byte> dataToDecrypt,
             ArraySegment<byte> headerToCopy,
-            X509Certificate2 receiverCertificate)
+            ICertificate receiverCertificate)
         {
             switch (SecurityPolicyUri)
             {
@@ -1313,6 +1339,8 @@ namespace Opc.Ua.Bindings
                 case SecurityPolicies.Aes256_Sha384_nistP384:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                case SecurityPolicies.ChaCha20Poly1305_curve448:
                 {
                     byte[] decryptedBuffer = BufferManager.TakeBuffer(SendBufferSize, "Decrypt");
 
@@ -1342,10 +1370,10 @@ namespace Opc.Ua.Bindings
         private string m_securityPolicyUri;
         private bool m_discoveryOnly;
         private EndpointDescription m_selectedEndpoint;
-        private X509Certificate2 m_serverCertificate;
-        private X509Certificate2Collection m_serverCertificateChain;
-        private X509Certificate2 m_clientCertificate;
-        private X509Certificate2Collection m_clientCertificateChain;
+        private ICertificate m_serverCertificate;
+        private ICertificateCollection m_serverCertificateChain;
+        private ICertificate m_clientCertificate;
+        private ICertificateCollection m_clientCertificateChain;
         private bool m_uninitialized;
         private Nonce m_localNonce;
         private Nonce m_remoteNonce;

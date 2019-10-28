@@ -194,8 +194,8 @@ namespace Opc.Ua.Sample.Controls
             m_messageContext = m_configuration.CreateMessageContext();
 
 
-            X509Certificate2 clientCertificate = null;
-            X509Certificate2Collection clientCertificateChain = null;
+            ICertificate clientCertificate = null;
+            ICertificateCollection clientCertificateChain = null;
 
             if (endpoint.Description.SecurityPolicyUri != SecurityPolicies.None)
             {
@@ -212,7 +212,7 @@ namespace Opc.Ua.Sample.Controls
                 }
 
                 // load certificate chain
-                clientCertificateChain = new X509Certificate2Collection(clientCertificate);
+                clientCertificateChain = new ICertificateCollection(clientCertificate);
                 List<CertificateIdentifier> issuers = new List<CertificateIdentifier>();
                 await m_configuration.CertificateValidator.GetIssuers(clientCertificate, issuers);
                 for (int i = 0; i < issuers.Count; i++)

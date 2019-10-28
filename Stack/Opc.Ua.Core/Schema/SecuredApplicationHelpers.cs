@@ -334,6 +334,8 @@ namespace Opc.Ua.Security
             profiles.Add(CreateProfile(SecurityPolicies.Aes256_Sha384_nistP384));
             profiles.Add(CreateProfile(SecurityPolicies.Aes128_Sha256_brainpoolP256r1));
             profiles.Add(CreateProfile(SecurityPolicies.Aes256_Sha384_brainpoolP384r1));
+            profiles.Add(CreateProfile(SecurityPolicies.ChaCha20Poly1305_curve25519));
+            profiles.Add(CreateProfile(SecurityPolicies.ChaCha20Poly1305_curve448));
 
             if (policies != null)
             {
@@ -419,6 +421,8 @@ namespace Opc.Ua.Security
                     case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                     case SecurityPolicies.Aes256_Sha384_nistP384:
                     case SecurityPolicies.Aes256_Sha384_brainpoolP384r1:
+                    case SecurityPolicies.ChaCha20Poly1305_curve25519:
+                    case SecurityPolicies.ChaCha20Poly1305_curve448:
                     {
                         policy.SecurityMode = MessageSecurityMode.SignAndEncrypt;
                         break;
@@ -449,7 +453,7 @@ namespace Opc.Ua.Security
         /// <summary>
         /// Gets the certificate associated with the identifier.
         /// </summary>
-        public async Task<X509Certificate2> Find()
+        public async Task<ICertificate> Find()
         {
             Opc.Ua.CertificateIdentifier output = SecuredApplication.FromCertificateIdentifier(this);
             return await output.Find(false);
@@ -458,7 +462,7 @@ namespace Opc.Ua.Security
         /// <summary>
         /// Gets the certificate associated with the identifier.
         /// </summary>
-        public async Task<X509Certificate2> Find(bool needPrivateKey)
+        public async Task<ICertificate> Find(bool needPrivateKey)
         {
             Opc.Ua.CertificateIdentifier output = SecuredApplication.FromCertificateIdentifier(this);
             return await output.Find(needPrivateKey);

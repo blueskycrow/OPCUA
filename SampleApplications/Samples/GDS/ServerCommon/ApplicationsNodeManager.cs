@@ -254,7 +254,7 @@ namespace Opc.Ua.Gds.Server
         {
             if (certificate != null && certificate.Length > 0)
             {
-                var x509 = new X509Certificate2(certificate);
+                var x509 = new ICertificate(certificate);
 
                 foreach (var certificateGroup in m_certificateGroups.Values)
                 {
@@ -278,12 +278,12 @@ namespace Opc.Ua.Gds.Server
                 {
                     try
                     {
-                        var x509 = new X509Certificate2(certificate);
+                        var x509 = new ICertificate(certificate);
                         await certificateGroup.RevokeCertificateAsync(x509);
                     }
                     catch (Exception e)
                     {
-                        Utils.Trace(e, "Unexpected error revoking certificate. {0} for Authority={1}", new X509Certificate2(certificate).Subject, certificateGroup.Id);
+                        Utils.Trace(e, "Unexpected error revoking certificate. {0} for Authority={1}", new ICertificate(certificate).Subject, certificateGroup.Id);
                     }
                 }
             }
@@ -951,7 +951,7 @@ namespace Opc.Ua.Gds.Server
             }
 
             // distinguish cert creation at approval/complete time
-            X509Certificate2 certificate = null;
+            ICertificate certificate = null;
             if (signedCertificate == null)
             {
                 byte[] certificateRequest;
@@ -1003,7 +1003,7 @@ namespace Opc.Ua.Gds.Server
                 }
                 else
                 {
-                    X509Certificate2KeyPair newKeyPair = null;
+                    ICertificateKeyPair newKeyPair = null;
                     try
                     {
                         newKeyPair = certificateGroup.NewKeyPairRequestAsync(
@@ -1033,7 +1033,7 @@ namespace Opc.Ua.Gds.Server
             }
             else
             {
-                certificate = new X509Certificate2(signedCertificate);
+                certificate = new ICertificate(signedCertificate);
             }
 
             // TODO: return chain, verify issuer chain cert is up to date, otherwise update local chain

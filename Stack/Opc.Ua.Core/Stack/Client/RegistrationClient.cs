@@ -35,7 +35,7 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription      description,
             EndpointConfiguration    endpointConfiguration,
-            X509Certificate2         instanceCertificate)
+            ICertificate         instanceCertificate)
         {
             if (configuration == null) throw new ArgumentNullException("configuration");
             if (description == null) throw new ArgumentNullException("description");
@@ -72,7 +72,7 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             ServiceMessageContext messageContext)
         {
             // create a UA binary channel.

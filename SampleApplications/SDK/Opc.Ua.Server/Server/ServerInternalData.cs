@@ -70,7 +70,7 @@ namespace Opc.Ua.Server
             ApplicationConfiguration             configuration,
             ServiceMessageContext                messageContext,
             CertificateValidator                 certificateValidator,
-            X509Certificate2                     instanceCertificate)
+            ICertificate                     instanceCertificate)
         {
             m_serverDescription = serverDescription;
             m_configuration = configuration;

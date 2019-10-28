@@ -513,7 +513,7 @@ namespace Opc.Ua.Gds.Client
         /// <summary>
         /// Add certificate.
         /// </summary>
-        public void AddCertificate(X509Certificate2 certificate, bool isTrustedCertificate)
+        public void AddCertificate(ICertificate certificate, bool isTrustedCertificate)
         {
             if (!IsConnected)
             {
@@ -683,7 +683,7 @@ namespace Opc.Ua.Gds.Client
         /// <summary>
         /// Reads the rejected  list.
         /// </summary>
-        public X509Certificate2Collection GetRejectedList()
+        public ICertificateCollection GetRejectedList()
         {
             if (!IsConnected)
             {
@@ -700,10 +700,10 @@ namespace Opc.Ua.Gds.Client
                     );
 
                 byte[][] rawCertificates = (byte[][])outputArguments[0];
-                X509Certificate2Collection collection = new X509Certificate2Collection();
+                ICertificateCollection collection = new ICertificateCollection();
                 foreach (var rawCertificate in rawCertificates)
                 {
-                    collection.Add(new X509Certificate2(rawCertificate));
+                    collection.Add(new ICertificate(rawCertificate));
                 }
                 return collection;
             }

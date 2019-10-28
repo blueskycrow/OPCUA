@@ -259,7 +259,7 @@ namespace Quickstarts.UserAuthenticationClient
             userid.StorePath = "LocalMachine\\My";
             userid.SubjectName = "UA Sample Client";
 
-            X509Certificate2 certificate = await userid.Find();
+            ICertificate certificate = await userid.Find();
             X509SecurityToken signingToken = new X509SecurityToken(certificate);
 
             // Create list of confirmation strings
@@ -463,7 +463,7 @@ namespace Quickstarts.UserAuthenticationClient
             try
             {
                 // load the certficate.
-                X509Certificate2 certificate = new X509Certificate2(
+                ICertificate certificate = new ICertificate(
                     CertificateTB.Text, 
                     CertificatePasswordTB.Text, 
                     X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);

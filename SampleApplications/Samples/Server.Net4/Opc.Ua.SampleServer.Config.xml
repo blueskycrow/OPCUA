@@ -15,7 +15,7 @@
     <ApplicationCertificate>
       <StoreType>Directory</StoreType>
       <StorePath>..\..\..\..\..\PKI\own</StorePath>
-      <SubjectName>UASampleServer-nistP256</SubjectName>
+      <SubjectName>UASampleServer-curve25519</SubjectName>
     </ApplicationCertificate>
 
     <!-- Where the issuer certificate are stored (certificate authorities) -->
@@ -77,6 +77,27 @@
 
     <SecurityPolicies>
       <ServerSecurityPolicy>
+        <SecurityMode>None_1</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#ChaCha20Poly1305_curve25519</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#ChaCha20Poly1305_curve25519</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <!--
+      <ServerSecurityPolicy>
+        <SecurityMode>Sign_2</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#ChaCha20Poly1305_curve448</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
+        <SecurityMode>SignAndEncrypt_3</SecurityMode>
+        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#ChaCha20Poly1305_curve448</SecurityPolicyUri>
+      </ServerSecurityPolicy>
+      <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256</SecurityPolicyUri>
       </ServerSecurityPolicy>
@@ -125,10 +146,6 @@
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha384_brainpoolP384r1</SecurityPolicyUri>
       </ServerSecurityPolicy>
       <ServerSecurityPolicy>
-        <SecurityMode>None_1</SecurityMode>
-        <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
-      </ServerSecurityPolicy>
-      <ServerSecurityPolicy>
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic128Rsa15</SecurityPolicyUri>
       </ServerSecurityPolicy>
@@ -136,6 +153,7 @@
         <SecurityMode>SignAndEncrypt_3</SecurityMode>
         <SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#Basic256</SecurityPolicyUri>
       </ServerSecurityPolicy>
+      -->
     </SecurityPolicies>
 
     <MinRequestThreadCount>5</MinRequestThreadCount>

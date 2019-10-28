@@ -703,7 +703,7 @@ namespace Opc.Ua.Configuration
 
             // update configuration with information form the install config.
             // check the certificate.
-            X509Certificate2 certificate = await configuration.SecurityConfiguration.ApplicationCertificate.Find(true);
+            ICertificate certificate = await configuration.SecurityConfiguration.ApplicationCertificate.Find(true);
 
             if (certificate != null)
             {
@@ -952,7 +952,7 @@ namespace Opc.Ua.Configuration
                 throw ServiceResultException.Create(StatusCodes.BadConfigurationError, "Configuration file does not specify a certificate.");
             }
 
-            X509Certificate2 certificate = await id.Find(true);
+            ICertificate certificate = await id.Find(true);
 
             // check that it is ok.
             if (certificate != null)
@@ -1061,7 +1061,7 @@ namespace Opc.Ua.Configuration
         /// </summary>
         private static async Task<bool> CheckApplicationInstanceCertificate(
             ApplicationConfiguration configuration,
-            X509Certificate2 certificate,
+            ICertificate certificate,
             bool silent,
             ushort minimumKeySize)
         {
@@ -1144,7 +1144,7 @@ namespace Opc.Ua.Configuration
         /// </summary>
         private static async Task<bool> CheckDomainsInCertificate(
             ApplicationConfiguration configuration,
-            X509Certificate2 certificate,
+            ICertificate certificate,
             bool silent)
         {
             Utils.Trace(Utils.TraceMasks.Information, "Checking domains in certificate. {0}", certificate.Subject);
@@ -1228,7 +1228,7 @@ namespace Opc.Ua.Configuration
         /// <param name="keySize">Size of the key.</param>
         /// <param name="lifetimeInMonths">The lifetime in months.</param>
         /// <returns>The new certificate</returns>
-        private static async Task<X509Certificate2> CreateApplicationInstanceCertificate(
+        private static async Task<ICertificate> CreateApplicationInstanceCertificate(
             ApplicationConfiguration configuration,
             ushort minimumKeySize = CertificateFactory.defaultKeySize,
             ushort lifeTimeInMonths = CertificateFactory.defaultLifeTime
@@ -1255,7 +1255,7 @@ namespace Opc.Ua.Configuration
                 Utils.GetAbsoluteDirectoryPath(id.StorePath, true, true, true);
             }
 
-            X509Certificate2 certificate = CertificateFactory.CreateCertificate(
+            ICertificate certificate = CertificateFactory.CreateCertificate(
                 id.StoreType,
                 id.StorePath,
                 null,
@@ -1307,7 +1307,7 @@ namespace Opc.Ua.Configuration
             }
 
             // delete private key.
-            X509Certificate2 certificate = await id.Find();
+            ICertificate certificate = await id.Find();
 
             // delete trusted peer certificate.
             if (configuration.SecurityConfiguration != null && configuration.SecurityConfiguration.TrustedPeerCertificates != null)
@@ -1340,7 +1340,7 @@ namespace Opc.Ua.Configuration
         /// </summary>
         /// <param name="configuration">The application's configuration which specifies the location of the TrustedStore.</param>
         /// <param name="certificate">The certificate to register.</param>
-        private static async Task AddToTrustedStore(ApplicationConfiguration configuration, X509Certificate2 certificate)
+        private static async Task AddToTrustedStore(ApplicationConfiguration configuration, ICertificate certificate)
         {
             if (certificate == null) throw new ArgumentNullException("certificate");
 
@@ -1370,7 +1370,7 @@ namespace Opc.Ua.Configuration
                 try
                 {
                     // check if it already exists.
-                    X509Certificate2Collection existingCertificates = await store.FindByThumbprint(certificate.Thumbprint);
+                    ICertificateCollection existingCertificates = await store.FindByThumbprint(certificate.Thumbprint);
 
                     if (existingCertificates.Count > 0)
                     {
@@ -1382,7 +1382,7 @@ namespace Opc.Ua.Configuration
                     List<string> subjectName = Utils.ParseDistinguishedName(certificate.Subject);
 
                     // check for old certificate.
-                    X509Certificate2Collection certificates = await store.Enumerate();
+                    ICertificateCollection certificates = await store.Enumerate();
 
                     for (int ii = 0; ii < certificates.Count; ii++)
                     {
@@ -1399,7 +1399,7 @@ namespace Opc.Ua.Configuration
                     }
 
                     // add new certificate.
-                    X509Certificate2 publicKey = new X509Certificate2(certificate.RawData);
+                    ICertificate publicKey = new ICertificate(certificate.RawData);
                     await store.Add(publicKey);
                 }
                 finally

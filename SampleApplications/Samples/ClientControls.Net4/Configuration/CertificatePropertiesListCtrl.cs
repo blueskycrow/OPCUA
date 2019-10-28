@@ -93,7 +93,7 @@ namespace Opc.Ua.Client.Controls
         /// <summary>
         /// Displays the properties of a certificate.
         /// </summary>
-        internal void Initialize(X509Certificate2 certificate)
+        internal void Initialize(ICertificate certificate)
         {
             ItemsLV.Items.Clear();
 

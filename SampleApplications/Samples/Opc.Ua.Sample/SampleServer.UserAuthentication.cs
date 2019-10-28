@@ -124,7 +124,7 @@ namespace Opc.Ua.Sample
         /// <summary>
         /// Verifies that a certificate user token is trusted.
         /// </summary>
-        private void VerifyCertificate(X509Certificate2 certificate)
+        private void VerifyCertificate(ICertificate certificate)
         {
             try
             {

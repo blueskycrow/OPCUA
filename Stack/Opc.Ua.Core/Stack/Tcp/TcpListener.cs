@@ -258,7 +258,7 @@ namespace Opc.Ua.Bindings
             uint requestId,
             uint sequenceNumber,
             uint channelId,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             ChannelToken token,
             OpenSecureChannelRequest request)
         {
@@ -294,8 +294,8 @@ namespace Opc.Ua.Bindings
         /// </summary>
         internal void CertificateUpdate(
             X509CertificateValidator validator,
-            X509Certificate2 serverCertificate,
-            X509Certificate2Collection serverCertificateChain)
+            ICertificate serverCertificate,
+            ICertificateCollection serverCertificateChain)
         {
             m_quotas.CertificateValidator = validator;
             m_serverCertificate = serverCertificate;
@@ -443,8 +443,8 @@ namespace Opc.Ua.Bindings
 
         private BufferManager m_bufferManager;
         private ChannelQuotas m_quotas;
-        private X509Certificate2 m_serverCertificate;
-        private X509Certificate2Collection m_serverCertificateChain;
+        private ICertificate m_serverCertificate;
+        private ICertificateCollection m_serverCertificateChain;
 
         private uint m_lastChannelId;
 

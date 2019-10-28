@@ -667,7 +667,7 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             ServiceMessageContext messageContext)
         {
             return CreateUaBinaryChannel(configuration, description, endpointConfiguration, clientCertificate, null, messageContext);
@@ -687,8 +687,8 @@ namespace Opc.Ua
             ApplicationConfiguration configuration,
             EndpointDescription description,
             EndpointConfiguration endpointConfiguration,
-            X509Certificate2 clientCertificate,
-            X509Certificate2Collection clientCertificateChain,
+            ICertificate clientCertificate,
+            ICertificateCollection clientCertificateChain,
             ServiceMessageContext messageContext)
         {
             bool useUaTcp = description.EndpointUrl.StartsWith(Utils.UriSchemeOpcTcp);
@@ -779,8 +779,8 @@ namespace Opc.Ua
         {
             Uri endpointUrl = this.m_channelFactory.Endpoint.Address.Uri;
 
-            X509Certificate2 clientCertificate = null;
-            X509Certificate2 serverCertificate = null;
+            ICertificate clientCertificate = null;
+            ICertificate serverCertificate = null;
             
             Security.Audit.SecureChannelCreated(
                     g_ImplementationString,

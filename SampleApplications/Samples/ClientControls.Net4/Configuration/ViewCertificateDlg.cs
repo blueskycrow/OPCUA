@@ -85,7 +85,7 @@ namespace Opc.Ua.Client.Controls
                 SubjectNameTB.Text = certificate.SubjectName;
                 ThumbprintTB.Text = certificate.Thumbprint;
 
-                X509Certificate2 data = await certificate.Find();
+                ICertificate data = await certificate.Find();
 
                 if (data != null)
                 {
@@ -218,7 +218,7 @@ namespace Opc.Ua.Client.Controls
                     m_currentDirectory = Environment.CurrentDirectory;
                 }
 
-                X509Certificate2 certificate = await m_certificate.Find();
+                ICertificate certificate = await m_certificate.Find();
 
                 if (certificate == null)
                 {

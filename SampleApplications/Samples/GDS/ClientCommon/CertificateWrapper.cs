@@ -37,7 +37,7 @@ namespace Opc.Ua.Gds.Client
     [DataContract(Namespace = Namespaces.OpcUaXsd)]
     public class CertificateWrapper : IFormattable, IEncodeable
     {
-        public X509Certificate2 Certificate { get; set; }
+        public ICertificate Certificate { get; set; }
 
         [DataMember(Order = 1)]
         public string SubjectName

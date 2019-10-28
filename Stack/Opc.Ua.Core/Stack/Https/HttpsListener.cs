@@ -181,7 +181,7 @@ namespace Opc.Ua.Bindings
             HttpsConnectionAdapterOptions httpsOptions = new HttpsConnectionAdapterOptions();
             httpsOptions.CheckCertificateRevocation = false;
             httpsOptions.ClientCertificateMode = ClientCertificateMode.NoCertificate;
-            httpsOptions.ServerCertificate = m_serverCert;
+            httpsOptions.ServerCertificate = (ICertificate)m_serverCert;
             httpsOptions.SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
             m_hostBuilder.UseKestrel(options =>
             {              
@@ -192,15 +192,14 @@ namespace Opc.Ua.Bindings
                 });
             });
 #else
-            HttpsConnectionFilterOptions httpsOptions = new HttpsConnectionFilterOptions();
+            HttpsConnectionAdapterOptions httpsOptions = new HttpsConnectionAdapterOptions();
             httpsOptions.CheckCertificateRevocation = false;
             httpsOptions.ClientCertificateMode = ClientCertificateMode.NoCertificate;
-            httpsOptions.ServerCertificate = m_serverCert;
+            httpsOptions.ServerCertificate = (ICertificate)m_serverCert;
             httpsOptions.SslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
             m_hostBuilder.UseKestrel(options =>
             {
                 options.NoDelay = true;
-                options.UseHttps(httpsOptions);
             });
 #endif
             m_hostBuilder.UseContentRoot(Directory.GetCurrentDirectory());
@@ -320,8 +319,8 @@ namespace Opc.Ua.Bindings
         /// </summary>
         internal void CertificateUpdate(
             X509CertificateValidator validator,
-            X509Certificate2 serverCertificate,
-            X509Certificate2Collection serverCertificateChain)
+            ICertificate serverCertificate,
+            ICertificateCollection serverCertificateChain)
         {
             Stop();
 
@@ -357,7 +356,7 @@ namespace Opc.Ua.Bindings
         private ITransportListenerCallback m_callback;
         private IWebHostBuilder m_hostBuilder;
         private IWebHost m_host;
-        private X509Certificate2 m_serverCert;
+        private ICertificate m_serverCert;
 #endregion
     }
 }

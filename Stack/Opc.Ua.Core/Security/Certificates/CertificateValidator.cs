@@ -30,7 +30,7 @@ namespace Opc.Ua
         /// </summary>
         public CertificateValidator()
         {
-            m_validatedCertificates = new Dictionary<string, X509Certificate2>();
+            m_validatedCertificates = new Dictionary<string, ICertificate>();
             m_rejectSHA1SignedCertificates = CertificateFactory.defaultHashSize >= 256;
             m_minimumCertificateKeySize = CertificateFactory.defaultKeySize;
         }
@@ -202,7 +202,7 @@ namespace Opc.Ua
         /// <param name="certificate">The certificate.</param>
         public override void Validate(X509Certificate2 certificate)
         {
-            Validate(new X509Certificate2Collection() { certificate });
+            Validate(new ICertificateCollection() { new ICertificate(certificate) });
         }
 
         /// <summary>
@@ -224,9 +224,9 @@ namespace Opc.Ua
         /// 
         /// The validator may be configured to ignore the application trust list and/or trust chain.
         /// </remarks>
-        public virtual void Validate(X509Certificate2Collection chain)
+        public virtual void Validate(ICertificateCollection chain)
         {
-            X509Certificate2 certificate = chain[0];
+            ICertificate certificate = chain[0];
 
             try
             {
@@ -236,7 +236,7 @@ namespace Opc.Ua
                     InternalValidate(chain).Wait();
 
                     // add to list of validated certificates.
-                    m_validatedCertificates[certificate.Thumbprint] = new X509Certificate2(certificate.RawData);
+                    m_validatedCertificates[certificate.Thumbprint] = new ICertificate(certificate.RawData);
                 }
             }
             catch (AggregateException ae)
@@ -310,7 +310,7 @@ namespace Opc.Ua
         /// <summary>
         /// Saves the certificate in the invalid certificate directory.
         /// </summary>
-        private void SaveCertificate(X509Certificate2 certificate)
+        private void SaveCertificate(ICertificate certificate)
         {
             try
             {
@@ -335,7 +335,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the certificate information for a trusted peer certificate.
         /// </summary>
-        private async Task<CertificateIdentifier> GetTrustedCertificate(X509Certificate2 certificate)
+        private async Task<CertificateIdentifier> GetTrustedCertificate(ICertificate certificate)
         {
             string certificateThumbprint = certificate.Thumbprint.ToUpper();
 
@@ -344,7 +344,7 @@ namespace Opc.Ua
             {
                 for (int ii = 0; ii < m_trustedCertificateList.Count; ii++)
                 {
-                    X509Certificate2 trusted = await m_trustedCertificateList[ii].Find(false);
+                    ICertificate trusted = await m_trustedCertificateList[ii].Find(false);
 
                     if (trusted != null && trusted.Thumbprint == certificate.Thumbprint)
                     {
@@ -363,7 +363,7 @@ namespace Opc.Ua
 
                 try
                 {
-                    X509Certificate2Collection trusted = await store.FindByThumbprint(certificate.Thumbprint);
+                    ICertificateCollection trusted = await store.FindByThumbprint(certificate.Thumbprint);
 
                     for (int ii = 0; ii < trusted.Count; ii++)
                     {
@@ -386,7 +386,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the authority key identifier in the certificate.
         /// </summary>
-        private X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(X509Certificate2 certificate)
+        private X509AuthorityKeyIdentifierExtension FindAuthorityKeyIdentifier(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -408,7 +408,7 @@ namespace Opc.Ua
         /// <summary>
         /// Determines whether the certificate is allowed to be an issuer.
         /// </summary>
-        private bool IsIssuerAllowed(X509Certificate2 certificate)
+        private bool IsIssuerAllowed(ICertificate certificate)
         {
             X509BasicConstraintsExtension constraints = new X509BasicConstraintsExtension();
 
@@ -428,7 +428,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the subject key identifier in the certificate.
         /// </summary>
-        private X509SubjectKeyIdentifierExtension FindSubjectKeyIdentifierExtension(X509Certificate2 certificate)
+        private X509SubjectKeyIdentifierExtension FindSubjectKeyIdentifierExtension(ICertificate certificate)
         {
             for (int ii = 0; ii < certificate.Extensions.Count; ii++)
             {
@@ -447,7 +447,7 @@ namespace Opc.Ua
         /// Returns true if the certificate matches the criteria.
         /// </summary>
         private bool Match(
-            X509Certificate2 certificate,
+            ICertificate certificate,
             string subjectName,
             string serialNumber,
             string authorityKeyId)
@@ -494,11 +494,11 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the issuers for the certificates.
         /// </summary>
-        public async Task<bool> GetIssuers(X509Certificate2Collection certificates, List<CertificateIdentifier> issuers)
+        public async Task<bool> GetIssuers(ICertificateCollection certificates, List<CertificateIdentifier> issuers)
         {
             bool isTrusted = false;
             CertificateIdentifier issuer = null;
-            X509Certificate2 certificate = certificates[0];
+            ICertificate certificate = certificates[0];
 
             CertificateIdentifierCollection collection = new CertificateIdentifierCollection();
 
@@ -548,7 +548,7 @@ namespace Opc.Ua
         /// <param name="certificate">The certificate.</param>
         /// <param name="issuers">The issuers.</param>
         /// <returns></returns>
-        public async Task<bool> GetIssuers(X509Certificate2 certificate, List<CertificateIdentifier> issuers)
+        public async Task<bool> GetIssuers(ICertificate certificate, List<CertificateIdentifier> issuers)
         {
             bool isTrusted = false;
             CertificateIdentifier issuer = null;
@@ -587,7 +587,7 @@ namespace Opc.Ua
         /// Returns the certificate information for a trusted issuer certificate.
         /// </summary>
         private async Task<CertificateIdentifier> GetIssuer(
-            X509Certificate2 certificate,
+            ICertificate certificate,
             CertificateIdentifierCollection explicitList,
             CertificateStoreIdentifier certificateStore,
             bool checkRecovationStatus)
@@ -610,7 +610,7 @@ namespace Opc.Ua
             {
                 for (int ii = 0; ii < explicitList.Count; ii++)
                 {
-                    X509Certificate2 issuer = await explicitList[ii].Find(false);
+                    ICertificate issuer = await explicitList[ii].Find(false);
 
                     if (issuer != null)
                     {
@@ -635,11 +635,11 @@ namespace Opc.Ua
 
                 try
                 {
-                    X509Certificate2Collection certificates = await store.Enumerate();
+                    ICertificateCollection certificates = await store.Enumerate();
 
                     for (int ii = 0; ii < certificates.Count; ii++)
                     {
-                        X509Certificate2 issuer = certificates[ii];
+                        ICertificate issuer = certificates[ii];
 
                         if (issuer != null)
                         {
@@ -688,12 +688,12 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificates">The certificates to be checked.</param>
         /// <exception cref="ServiceResultException">If certificate[0] cannot be accepted</exception>
-        protected virtual async Task InternalValidate(X509Certificate2Collection certificates)
+        protected virtual async Task InternalValidate(ICertificateCollection certificates)
         {
-            X509Certificate2 certificate = certificates[0];
+            ICertificate certificate = certificates[0];
 
             // check for previously validated certificate.
-            X509Certificate2 certificate2 = null;
+            ICertificate certificate2 = null;
 
             if (m_validatedCertificates.TryGetValue(certificate.Thumbprint, out certificate2))
             {
@@ -972,7 +972,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns if a self signed certificate is properly signed.
         /// </summary>
-        private static bool IsSignatureValid(X509Certificate2 cert)
+        private static bool IsSignatureValid(ICertificate cert)
         {
             return CertificateFactory.VerifySelfSigned(cert);
         }
@@ -981,7 +981,7 @@ namespace Opc.Ua
         #region Private Fields
         private object m_lock = new object();
         private object m_callbackLock = new object();
-        private Dictionary<string, X509Certificate2> m_validatedCertificates;
+        private Dictionary<string, ICertificate> m_validatedCertificates;
         private CertificateStoreIdentifier m_trustedCertificateStore;
         private CertificateIdentifierCollection m_trustedCertificateList;
         private CertificateStoreIdentifier m_issuerCertificateStore;
@@ -989,7 +989,7 @@ namespace Opc.Ua
         private CertificateStoreIdentifier m_rejectedCertificateStore;
         private event CertificateValidationEventHandler m_CertificateValidation;
         private event CertificateUpdateEventHandler m_CertificateUpdate;
-        private X509Certificate2 m_applicationCertificate;
+        private ICertificate m_applicationCertificate;
         private bool m_rejectSHA1SignedCertificates;
         private ushort m_minimumCertificateKeySize;
         #endregion
@@ -1005,7 +1005,7 @@ namespace Opc.Ua
         /// <summary>
         /// Creates a new instance.
         /// </summary>
-        internal CertificateValidationEventArgs(ServiceResult error, X509Certificate2 certificate)
+        internal CertificateValidationEventArgs(ServiceResult error, ICertificate certificate)
         {
             m_error = error;
             m_certificate = certificate;
@@ -1024,7 +1024,7 @@ namespace Opc.Ua
         /// <summary>
         /// The certificate.
         /// </summary>
-        public X509Certificate2 Certificate
+        public ICertificate Certificate
         {
             get { return m_certificate; }
         }
@@ -1041,7 +1041,7 @@ namespace Opc.Ua
 
         #region Private Fields
         private ServiceResult m_error;
-        private X509Certificate2 m_certificate;
+        private ICertificate m_certificate;
         private bool m_accept;
         #endregion
     }

@@ -102,12 +102,12 @@ namespace Opc.Ua
         }
 
         /// <summary cref="ICertificateStore.Enumerate()" />
-        public Task<X509Certificate2Collection> Enumerate()
+        public Task<ICertificateCollection> Enumerate()
         {
             lock (m_lock)
             {
                 IDictionary<string, Entry> certificatesInStore = Load(null);
-                X509Certificate2Collection certificates = new X509Certificate2Collection();
+                ICertificateCollection certificates = new ICertificateCollection();
 
                 foreach (Entry entry in certificatesInStore.Values)
                 {
@@ -125,8 +125,8 @@ namespace Opc.Ua
             }
         }
 
-        /// <summary cref="ICertificateStore.Add(X509Certificate2)" />
-        public Task Add(X509Certificate2 certificate, string password = null)
+        /// <summary cref="ICertificateStore.Add(ICertificate)" />
+        public Task Add(ICertificate certificate, string password = null)
         {
             if (certificate == null) throw new ArgumentNullException("certificate");
 
@@ -203,9 +203,9 @@ namespace Opc.Ua
         }
 
         /// <summary cref="ICertificateStore.FindByThumbprint(string)" />
-        public Task<X509Certificate2Collection> FindByThumbprint(string thumbprint)
+        public Task<ICertificateCollection> FindByThumbprint(string thumbprint)
         {
-            X509Certificate2Collection certificates = new X509Certificate2Collection();
+            ICertificateCollection certificates = new ICertificateCollection();
 
             lock (m_lock)
             {
@@ -265,7 +265,7 @@ namespace Opc.Ua
         /// <summary>
         /// Loads the private key from a PFX file in the certificate store.
         /// </summary>
-        public X509Certificate2 LoadPrivateKey(string thumbprint, string subjectName, string password)
+        public ICertificate LoadPrivateKey(string thumbprint, string subjectName, string password)
         {
             if (m_certificateSubdir == null || !m_certificateSubdir.Exists)
             {
@@ -281,7 +281,7 @@ namespace Opc.Ua
             {
                 try
                 {
-                    X509Certificate2 certificate = new X509Certificate2(file.FullName);
+                    ICertificate certificate = new ICertificate(file.FullName);
 
                     if (!String.IsNullOrEmpty(thumbprint))
                     {
@@ -320,14 +320,13 @@ namespace Opc.Ua
 
                     try
                     {
-                        certificate = new X509Certificate2(
-                            privateKeyFile.FullName,
-                            password,
-                            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
+                        certificate = CertificateFactory.CreateCertificateFromPKCS12(
+                            File.ReadAllBytes(privateKeyFile.FullName),
+                            password);
 
                         if (certificate.GetRSAPrivateKey() != null)
                         {
-                            if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+                            // if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
                             {
                                 return certificate;
                             }
@@ -347,14 +346,14 @@ namespace Opc.Ua
                     }
                     catch (Exception)
                     {
-                        certificate = new X509Certificate2(
+                        certificate = new ICertificate(
                             privateKeyFile.FullName,
                             password,
                             X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                         if (certificate.GetRSAPrivateKey() != null)
                         {
-                            if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
+                            // if (CertificateFactory.VerifyRSAKeyPair(certificate, certificate, true))
                             {
                                 return certificate;
                             }
@@ -383,7 +382,7 @@ namespace Opc.Ua
         /// <summary>
         /// Checks if issuer has revoked the certificate.
         /// </summary>
-        public StatusCode IsRevoked(X509Certificate2 issuer, X509Certificate2 certificate)
+        public StatusCode IsRevoked(ICertificate issuer, ICertificate certificate)
         {
             if (issuer == null)
             {
@@ -478,7 +477,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the CRLs for the issuer.
         /// </summary>
-        public List<X509CRL> EnumerateCRLs(X509Certificate2 issuer, bool validateUpdateTime = true)
+        public List<X509CRL> EnumerateCRLs(ICertificate issuer, bool validateUpdateTime = true)
         {
             if (issuer == null)
             {
@@ -519,10 +518,10 @@ namespace Opc.Ua
                 throw new ArgumentNullException("crl");
             }
 
-            X509Certificate2 issuer = null;
-            X509Certificate2Collection certificates = null;
+            ICertificate issuer = null;
+            ICertificateCollection certificates = null;
             certificates = Enumerate().Result;
-            foreach (X509Certificate2 certificate in certificates)
+            foreach (ICertificate certificate in certificates)
             {
                 if (Utils.CompareDistinguishedName(certificate.Subject, crl.Issuer))
                 {
@@ -641,7 +640,7 @@ namespace Opc.Ua
                     {
                         Entry entry = new Entry();
 
-                        entry.Certificate = new X509Certificate2(file.FullName);
+                        entry.Certificate = new ICertificate(file.FullName);
                         entry.CertificateFile = file;
                         entry.PrivateKeyFile = null;
                         entry.CertificateWithPrivateKey = null;
@@ -661,10 +660,10 @@ namespace Opc.Ua
                             if (entry.PrivateKeyFile.Exists)
                             {
                                 try
-                                {
-                                    X509Certificate2 certificate = new X509Certificate2(
-                                        entry.PrivateKeyFile.FullName
-                                    );
+                                { 
+                                    ICertificate certificate = CertificateFactory.CreateCertificateFromPKCS12(
+                                        File.ReadAllBytes(entry.PrivateKeyFile.FullName), 
+                                        null);
 
                                     if (certificate.HasPrivateKey)
                                     {
@@ -735,7 +734,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the file name to use for the certificate.
         /// </summary>
-        private string GetFileName(X509Certificate2 certificate)
+        private string GetFileName(ICertificate certificate)
         {
             // build file name.
             string commonName = certificate.FriendlyName;
@@ -836,9 +835,9 @@ namespace Opc.Ua
         private class Entry
         {
             public FileInfo CertificateFile;
-            public X509Certificate2 Certificate;
+            public ICertificate Certificate;
             public FileInfo PrivateKeyFile;
-            public X509Certificate2 CertificateWithPrivateKey;
+            public ICertificate CertificateWithPrivateKey;
         }
         #endregion
 

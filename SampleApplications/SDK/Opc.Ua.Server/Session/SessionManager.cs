@@ -146,12 +146,12 @@ namespace Opc.Ua.Server
         /// </summary>
         public virtual Session CreateSession(
             OperationContext context,
-            X509Certificate2 serverCertificate,
+            ICertificate serverCertificate,
             string sessionName,
             byte[] clientNonce,
             ApplicationDescription clientDescription,
             string endpointUrl,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             double requestedSessionTimeout,
             uint maxResponseMessageSize,
             out NodeId sessionId,
@@ -503,14 +503,14 @@ namespace Opc.Ua.Server
         protected virtual Session CreateSession(
             OperationContext context,
             IServerInternal server,
-            X509Certificate2 serverCertificate,
+            ICertificate serverCertificate,
             NodeId sessionCookie,
             byte[] clientNonce,
             Nonce serverNonce,
             string sessionName,
             ApplicationDescription clientDescription,
             string endpointUrl,
-            X509Certificate2 clientCertificate,
+            ICertificate clientCertificate,
             double sessionTimeout,
             uint maxResponseMessageSize,
             int maxRequestAge, // TBD - Remove unused parameter.

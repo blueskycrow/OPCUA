@@ -728,14 +728,14 @@ namespace NUnit.Opc.Ua.Gds.Test
             foreach (var application in _goodApplicationTestSet)
             {
                 Assert.Null(application.CertificateRequestId);
-                X509Certificate2 csrCertificate;
+                ICertificate csrCertificate;
                 if (application.PrivateKeyFormat == "PFX")
                 {
                     csrCertificate = CertificateFactory.CreateCertificateFromPKCS12(application.PrivateKey, application.PrivateKeyPassword);
                 }
                 else
                 {
-                    csrCertificate = CertificateFactory.CreateCertificateWithPEMPrivateKey(new X509Certificate2(application.Certificate), application.PrivateKey, application.PrivateKeyPassword);
+                    csrCertificate = CertificateFactory.CreateCertificateWithPEMPrivateKey(new ICertificate(application.Certificate), application.PrivateKey, application.PrivateKeyPassword);
                 }
                 byte[] certificateRequest = CertificateFactory.CreateSigningRequest(csrCertificate, application.DomainNames);
                 csrCertificate.Dispose();

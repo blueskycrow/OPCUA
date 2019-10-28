@@ -107,7 +107,7 @@ namespace Opc.Ua
         /// <summary>
         /// Verifies the signature on the CRL.
         /// </summary>
-        public bool VerifySignature(X509Certificate2 issuer, bool throwOnError)
+        public bool VerifySignature(ICertificate issuer, bool throwOnError)
         {
             m_issuer = issuer;
             try
@@ -129,7 +129,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns true the certificate is in the CRL.
         /// </summary>
-        public bool IsRevoked(X509Certificate2 certificate)
+        public bool IsRevoked(ICertificate certificate)
         {
             // check that the issuer matches.
             if (m_issuer == null || !Utils.CompareDistinguishedName(certificate.Issuer, m_issuer.Subject))
@@ -161,7 +161,7 @@ namespace Opc.Ua
         #endregion
 
         #region Private Fields
-        X509Certificate2 m_issuer;
+        ICertificate m_issuer;
         private X509Crl m_crl;
         #endregion
     }

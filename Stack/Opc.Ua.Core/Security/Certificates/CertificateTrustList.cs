@@ -43,9 +43,9 @@ namespace Opc.Ua
         /// Returns the certificates in the trust list.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public async Task<X509Certificate2Collection> GetCertificates()
+        public async Task<ICertificateCollection> GetCertificates()
         {
-            X509Certificate2Collection collection = new X509Certificate2Collection();
+            ICertificateCollection collection = new ICertificateCollection();
 
             CertificateStoreIdentifier id = new CertificateStoreIdentifier();
 
@@ -75,7 +75,7 @@ namespace Opc.Ua
 
             foreach (CertificateIdentifier trustedCertificate in TrustedCertificates)
             {
-                X509Certificate2 certificate = await trustedCertificate.Find();
+                ICertificate certificate = await trustedCertificate.Find();
 
                 if (certificate != null)
                 {

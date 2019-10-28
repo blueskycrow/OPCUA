@@ -144,7 +144,7 @@ namespace Opc.Ua
         /// Gets or sets the actual certificate.
         /// </summary>
         /// <value>The X509 certificate used by this instance.</value>
-        public X509Certificate2 Certificate
+        public ICertificate Certificate
         {
             get { return m_certificate;  }
             set { m_certificate = value; }
@@ -153,7 +153,7 @@ namespace Opc.Ua
         /// <summary>
         /// Finds a certificate in a store.
         /// </summary>
-        public async Task<X509Certificate2> Find()
+        public async Task<ICertificate> Find()
         {
             return await Find(false);
         }
@@ -161,7 +161,7 @@ namespace Opc.Ua
         /// <summary>
         /// Loads the private key for the certificate with an optional password.
         /// </summary>
-        public async Task<X509Certificate2> LoadPrivateKey(String password)
+        public async Task<ICertificate> LoadPrivateKey(String password)
         {
             if (this.StoreType == CertificateStoreType.Directory)
             {                
@@ -180,11 +180,11 @@ namespace Opc.Ua
         /// Finds a certificate in a store.
         /// </summary>
         /// <param name="needPrivateKey">if set to <c>true</c> the returned certificate must contain the private key.</param>
-        /// <returns>An instance of the <see cref="X509Certificate2"/> that is emebeded by this instance or find it in 
+        /// <returns>An instance of the <see cref="ICertificate"/> that is emebeded by this instance or find it in 
         /// the selected strore pointed out by the <see cref="StorePath"/> using selected <see cref="SubjectName"/>.</returns>
-        public async Task<X509Certificate2> Find(bool needPrivateKey)
+        public async Task<ICertificate> Find(bool needPrivateKey)
         {
-            X509Certificate2 certificate = null;
+            ICertificate certificate = null;
 
             // check if the entire certificate has been specified.
             if (m_certificate != null && (!needPrivateKey || m_certificate.HasPrivateKey))
@@ -198,7 +198,7 @@ namespace Opc.Ua
                 {
                     store.Open(StorePath);
 
-                    X509Certificate2Collection collection = await store.Enumerate();
+                    ICertificateCollection collection = await store.Enumerate();
 
                     certificate = Find(collection, m_thumbprint, m_subjectName, needPrivateKey);
 
@@ -236,10 +236,10 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="certificate">The certificate.</param>
         /// <returns>
-        /// A string containg FriendlyName of the <see cref="X509Certificate2"/> or created using Subject of 
-        /// the <see cref="X509Certificate2"/>.
+        /// A string containg FriendlyName of the <see cref="ICertificate"/> or created using Subject of 
+        /// the <see cref="ICertificate"/>.
         /// </returns>
-        private static string GetDisplayName(X509Certificate2 certificate)
+        private static string GetDisplayName(ICertificate certificate)
         {
             if (!String.IsNullOrEmpty(certificate.FriendlyName))
             {
@@ -300,14 +300,14 @@ namespace Opc.Ua
         /// <param name="subjectName">Subject name of the certificate.</param>
         /// <param name="needPrivateKey">if set to <c>true</c> [need private key].</param>
         /// <returns></returns>
-        public static X509Certificate2 Find(X509Certificate2Collection collection, string thumbprint, string subjectName, bool needPrivateKey)
+        public static ICertificate Find(ICertificateCollection collection, string thumbprint, string subjectName, bool needPrivateKey)
         {
             // find by thumbprint.
             if (!String.IsNullOrEmpty(thumbprint))
             {
                 collection = collection.Find(X509FindType.FindByThumbprint, thumbprint, false);
 
-                foreach (X509Certificate2 certificate in collection)
+                foreach (ICertificate certificate in collection)
                 {
                     if (!needPrivateKey || certificate.HasPrivateKey)
                     {
@@ -332,7 +332,7 @@ namespace Opc.Ua
             {
                 List<string> subjectName2 = Utils.ParseDistinguishedName(subjectName);
 
-                foreach (X509Certificate2 certificate in collection)
+                foreach (ICertificate certificate in collection)
                 {
                     if (Utils.CompareDistinguishedName(certificate, subjectName2))
                     {
@@ -345,7 +345,7 @@ namespace Opc.Ua
 
                 collection = collection.Find(X509FindType.FindBySubjectName, subjectName, false);
 
-                foreach (X509Certificate2 certificate in collection)
+                foreach (ICertificate certificate in collection)
                 {
                     if (!needPrivateKey || certificate.HasPrivateKey)
                     {
@@ -366,7 +366,7 @@ namespace Opc.Ua
         /// A DER blob containing zero or more certificates.
         /// </returns>
         /// <exception cref="CryptographicException">If the <paramref name="certificates"/> is null or empty.</exception>
-        public static byte[] CreateBlob(IList<X509Certificate2> certificates)
+        public static byte[] CreateBlob(IList<ICertificate> certificates)
         {
             if (certificates == null || certificates.Count == 0)
             {
@@ -374,7 +374,7 @@ namespace Opc.Ua
             }
 
             // copy the primary certificate.
-            X509Certificate2 certificate = certificates[0];
+            ICertificate certificate = certificates[0];
             byte[] blobData = certificate.RawData;
 
             // check for any supporting certificates.
@@ -414,21 +414,21 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="encodedData">The encoded data.</param>
         /// <returns>
-        /// An object of <see cref="X509Certificate2Collection"/> containing <see cref="X509Certificate2"/>
+        /// An object of <see cref="ICertificateCollection"/> containing <see cref="ICertificate"/>
         /// certificates created from a buffer with DER encoded certificate
         /// </returns>
         /// <remarks>
         /// Any supporting certificates found in the buffer are processed as well.
         /// </remarks>
-        public static X509Certificate2Collection ParseBlob(byte[] encodedData)
+        public static ICertificateCollection ParseBlob(byte[] encodedData)
         {
             if (!IsValidCertificateBlob(encodedData))
             {
                 throw new CryptographicException("Primary certificate in blob is not valid.");
             }
 
-            X509Certificate2Collection collection = new X509Certificate2Collection();
-            X509Certificate2 certificate = CertificateFactory.Create(encodedData, true);
+            ICertificateCollection collection = new ICertificateCollection();
+            ICertificate certificate = CertificateFactory.Create(encodedData, true);
             collection.Add(certificate);
 
             byte[] rawData = encodedData;
@@ -449,7 +449,7 @@ namespace Opc.Ua
                         throw new CryptographicException("Supporting certificate in blob is not valid.");
                     }
 
-                    X509Certificate2 issuerCertificate = CertificateFactory.Create(buffer, true);
+                    ICertificate issuerCertificate = CertificateFactory.Create(buffer, true);
                     collection.Add(issuerCertificate);
                     data = issuerCertificate.RawData;
                     processedBytes += data.Length;
@@ -476,7 +476,7 @@ namespace Opc.Ua
         /// <summary>
         /// Checks if the certificate data represents a valid X509v3 certificate.
         /// </summary>
-        /// <param name="rawData">The raw data of a <see cref="X509Certificate2"/> object.</param>
+        /// <param name="rawData">The raw data of a <see cref="ICertificate"/> object.</param>
         /// <returns>
         /// 	<c>true</c> if <paramref name="rawData"/> is a valid certificate BLOB; otherwise, <c>false</c>.
         /// </returns>
@@ -618,13 +618,13 @@ namespace Opc.Ua
         /// Identifiers which do not refer to valid certificates are ignored.
         /// </remarks>
         /// <returns>The list of valid certificates in the store.</returns>
-        public async Task<X509Certificate2Collection> Enumerate()
+        public async Task<ICertificateCollection> Enumerate()
         {
-            X509Certificate2Collection collection = new X509Certificate2Collection();
+            ICertificateCollection collection = new ICertificateCollection();
 
             for (int ii = 0; ii < this.Count; ii++)
             {
-                X509Certificate2 certificate = await this[ii].Find(false);
+                ICertificate certificate = await this[ii].Find(false);
 
                 if (certificate != null)
                 {
@@ -639,13 +639,13 @@ namespace Opc.Ua
         /// Adds a certificate to the store.
         /// </summary>
         /// <param name="certificate">The certificate.</param>
-        public async Task Add(X509Certificate2 certificate, string password = null)
+        public async Task Add(ICertificate certificate, string password = null)
         {
             if (certificate == null) throw new ArgumentNullException("certificate");
 
             for (int ii = 0; ii < this.Count; ii++)
             {
-                X509Certificate2 current = await this[ii].Find(false);
+                ICertificate current = await this[ii].Find(false);
 
                 if (current != null && current.Thumbprint == certificate.Thumbprint)
                 {
@@ -674,7 +674,7 @@ namespace Opc.Ua
 
             for (int ii = 0; ii < this.Count; ii++)
             {
-                X509Certificate2 certificate = await this[ii].Find(false);
+                ICertificate certificate = await this[ii].Find(false);
 
                 if (certificate != null && certificate.Thumbprint == thumbprint)
                 {
@@ -691,7 +691,7 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="thumbprint">The thumbprint.</param>
         /// <returns>The matching certificate</returns>
-        public async Task<X509Certificate2Collection> FindByThumbprint(string thumbprint)
+        public async Task<ICertificateCollection> FindByThumbprint(string thumbprint)
         {
             if (String.IsNullOrEmpty(thumbprint))
             {
@@ -700,15 +700,15 @@ namespace Opc.Ua
 
             for (int ii = 0; ii < this.Count; ii++)
             {
-                X509Certificate2 certificate = await this[ii].Find(false);
+                ICertificate certificate = await this[ii].Find(false);
 
                 if (certificate != null && certificate.Thumbprint == thumbprint)
                 {
-                    return new X509Certificate2Collection { certificate };
+                    return new ICertificateCollection { certificate };
                 }
             }
 
-            return new X509Certificate2Collection();
+            return new ICertificateCollection();
         }
 
         /// <summary>
@@ -719,7 +719,7 @@ namespace Opc.Ua
         /// <summary>
         /// Checks if issuer has revoked the certificate.
         /// </summary>
-        public StatusCode IsRevoked(X509Certificate2 issuer, X509Certificate2 certificate)
+        public StatusCode IsRevoked(ICertificate issuer, ICertificate certificate)
         {
             return StatusCodes.BadNotSupported;
         }
@@ -735,7 +735,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the CRLs for the issuer.
         /// </summary>
-        public List<X509CRL> EnumerateCRLs(X509Certificate2 issuer, bool validateUpdateTime = true)
+        public List<X509CRL> EnumerateCRLs(ICertificate issuer, bool validateUpdateTime = true)
         {
             return new List<X509CRL>();
         }

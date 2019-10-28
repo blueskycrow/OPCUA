@@ -48,7 +48,7 @@ namespace Opc.Ua.Gds.Client
         private GlobalDiscoveryServerClient m_gds;
         private ServerPushConfigurationClient m_server;
         private RegisteredApplication m_application;
-        private X509Certificate2 m_certificate;
+        private ICertificate m_certificate;
         private string m_certificatePassword;
 
         public async Task Initialize(
@@ -71,13 +71,13 @@ namespace Opc.Ua.Gds.Client
 
             CertificateControl.ShowNothing();
 
-            X509Certificate2 certificate = null;
+            ICertificate certificate = null;
 
             if (!isHttps)
             {
                 if (server.Endpoint != null && server.Endpoint.Description.ServerCertificate != null)
                 {
-                    certificate = new X509Certificate2(server.Endpoint.Description.ServerCertificate);
+                    certificate = new ICertificate(server.Endpoint.Description.ServerCertificate);
                 }
                 else if (application != null)
                 {
@@ -87,7 +87,7 @@ namespace Opc.Ua.Gds.Client
 
                         if (file != null)
                         {
-                            certificate = new X509Certificate2(file);
+                            certificate = new ICertificate(file);
                         }
                     }
                     else if (!String.IsNullOrEmpty(application.CertificateStorePath))
@@ -113,7 +113,7 @@ namespace Opc.Ua.Gds.Client
 
                         if (file != null)
                         {
-                            certificate = new X509Certificate2(file);
+                            certificate = new ICertificate(file);
                         }
                     }
                     else
@@ -250,7 +250,7 @@ namespace Opc.Ua.Gds.Client
                 }
                 else
                 {
-                    X509Certificate2 csrCertificate = null;
+                    ICertificate csrCertificate = null;
                     if (m_certificate.HasPrivateKey)
                     {
                         csrCertificate = m_certificate;
@@ -310,7 +310,7 @@ namespace Opc.Ua.Gds.Client
                 if (m_application.RegistrationType != RegistrationType.ServerPush)
                 {
 
-                    X509Certificate2 newCert = new X509Certificate2(certificate);
+                    ICertificate newCert = new ICertificate(certificate);
 
                     if (!String.IsNullOrEmpty(m_application.CertificateStorePath) && !String.IsNullOrEmpty(m_application.CertificateSubjectName))
                     {
@@ -328,7 +328,7 @@ namespace Opc.Ua.Gds.Client
                             // in this case, privateKey is null
                             if (privateKeyPFX == null)
                             {
-                                X509Certificate2 oldCertificate = await cid.Find(true);
+                                ICertificate oldCertificate = await cid.Find(true);
                                 if (oldCertificate != null && oldCertificate.HasPrivateKey)
                                 {
                                     oldCertificate = await cid.LoadPrivateKey(string.Empty);
@@ -342,7 +342,7 @@ namespace Opc.Ua.Gds.Client
                             }
                             else
                             {
-                                newCert = new X509Certificate2(privateKeyPFX, string.Empty, X509KeyStorageFlags.Exportable);
+                                newCert = new ICertificate(privateKeyPFX, string.Empty, X509KeyStorageFlags.Exportable);
                                 newCert = CertificateFactory.Load(newCert, true);
                             }
 
@@ -402,7 +402,7 @@ namespace Opc.Ua.Gds.Client
                                 if (file.Exists)
                                 {
                                     byte[] pkcsData = File.ReadAllBytes(absoluteCertificatePrivateKeyPath);
-                                    X509Certificate2 oldCertificate = CertificateFactory.CreateCertificateFromPKCS12(pkcsData, m_certificatePassword);
+                                    ICertificate oldCertificate = CertificateFactory.CreateCertificateFromPKCS12(pkcsData, m_certificatePassword);
                                     newCert = CertificateFactory.CreateCertificateWithPrivateKey(newCert, oldCertificate);
                                     pkcsData = newCert.Export(X509ContentType.Pfx, m_certificatePassword);
                                     File.WriteAllBytes(absoluteCertificatePrivateKeyPath, pkcsData);
@@ -427,11 +427,11 @@ namespace Opc.Ua.Gds.Client
                         {
                             foreach (byte[] issuerCertificate in issuerCertificates)
                             {
-                                X509Certificate2 x509 = new X509Certificate2(issuerCertificate);
-                                X509Certificate2Collection certs = await store.FindByThumbprint(x509.Thumbprint);
+                                ICertificate x509 = new ICertificate(issuerCertificate);
+                                ICertificateCollection certs = await store.FindByThumbprint(x509.Thumbprint);
                                 if (certs.Count == 0)
                                 {
-                                    await store.Add(new X509Certificate2(issuerCertificate));
+                                    await store.Add(new ICertificate(issuerCertificate));
                                 }
                             }
                         }
@@ -444,7 +444,7 @@ namespace Opc.Ua.Gds.Client
                 {
                     if (privateKeyPFX != null && privateKeyPFX.Length > 0)
                     {
-                        var x509 = new X509Certificate2(privateKeyPFX, m_certificatePassword, X509KeyStorageFlags.Exportable);
+                        var x509 = new ICertificate(privateKeyPFX, m_certificatePassword, X509KeyStorageFlags.Exportable);
                         privateKeyPFX = x509.Export(X509ContentType.Pfx);
                     }
                     bool applyChanges = m_server.UpdateCertificate(

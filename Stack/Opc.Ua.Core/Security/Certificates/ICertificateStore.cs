@@ -39,13 +39,13 @@ namespace Opc.Ua
         /// <summary>
         /// Enumerates the certificates in the store.
         /// </summary>
-        Task<X509Certificate2Collection> Enumerate();
+        Task<ICertificateCollection> Enumerate();
 
         /// <summary>
         /// Adds a certificate to the store.
         /// </summary>
         /// <param name="certificate">The certificate.</param>
-        Task Add(X509Certificate2 certificate, string password = null);
+        Task Add(ICertificate certificate, string password = null);
 
         /// <summary>
         /// Deletes a certificate from the store.
@@ -59,12 +59,12 @@ namespace Opc.Ua
         /// </summary>
         /// <param name="thumbprint">The thumbprint.</param>
         /// <returns>The matching certificate</returns>
-        Task<X509Certificate2Collection> FindByThumbprint(string thumbprint);
+        Task<ICertificateCollection> FindByThumbprint(string thumbprint);
 
         /// <summary>
         /// Checks if issuer has revoked the certificate.
         /// </summary>
-        StatusCode IsRevoked(X509Certificate2 issuer, X509Certificate2 certificate);
+        StatusCode IsRevoked(ICertificate issuer, ICertificate certificate);
 
         /// <summary>
         /// Whether the store supports CRLs.
@@ -79,7 +79,7 @@ namespace Opc.Ua
         /// <summary>
         /// Returns the CRLs for the issuer.
         /// </summary>
-        List<X509CRL> EnumerateCRLs(X509Certificate2 issuer, bool validateUpdateTime = true);
+        List<X509CRL> EnumerateCRLs(ICertificate issuer, bool validateUpdateTime = true);
 
         /// <summary>
         /// Adds a CRL to the store.

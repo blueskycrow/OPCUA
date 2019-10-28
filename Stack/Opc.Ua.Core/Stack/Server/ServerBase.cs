@@ -515,11 +515,11 @@ namespace Opc.Ua
         /// The server's application instance certificate.
         /// </summary>
         /// <value>The instance X.509 certificate.</value>
-        protected X509Certificate2 InstanceCertificate
+        protected ICertificate InstanceCertificate
         {
             get 
             { 
-                return (X509Certificate2)m_instanceCertificate; 
+                return (ICertificate)m_instanceCertificate; 
             }
             
             private set 
@@ -531,7 +531,7 @@ namespace Opc.Ua
         /// <summary>
         /// Gets the instance certificate chain.
         /// </summary>
-        protected X509Certificate2Collection InstanceCertificateChain
+        protected ICertificateCollection InstanceCertificateChain
         {
             get
             {
@@ -1384,7 +1384,7 @@ namespace Opc.Ua
             }
 
             // load certificate chain.
-            InstanceCertificateChain = new X509Certificate2Collection(InstanceCertificate);
+            InstanceCertificateChain = new ICertificateCollection(InstanceCertificate);
             List<CertificateIdentifier> issuers = new List<CertificateIdentifier>();
             configuration.CertificateValidator.GetIssuers(InstanceCertificateChain, issuers).Wait();
 
@@ -1556,7 +1556,7 @@ namespace Opc.Ua
         private object m_serverError;
         private object m_certificateValidator;
         private object m_instanceCertificate;
-        private X509Certificate2Collection m_instanceCertificateChain;
+        private ICertificateCollection m_instanceCertificateChain;
         private object m_serverProperties;
         private object m_configuration;
         private object m_serverDescription;

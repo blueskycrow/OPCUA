@@ -36,8 +36,8 @@ namespace Opc.Ua.Bindings
             BufferManager bufferManager,
             IMessageSocketFactory socketFactory,
             ChannelQuotas quotas,
-            X509Certificate2 clientCertificate,
-            X509Certificate2 serverCertificate,
+            ICertificate clientCertificate,
+            ICertificate serverCertificate,
             EndpointDescription endpoint)
          :
             this(contextId, bufferManager, socketFactory, quotas, clientCertificate, null, serverCertificate, endpoint)
@@ -52,9 +52,9 @@ namespace Opc.Ua.Bindings
             BufferManager bufferManager,
             IMessageSocketFactory socketFactory,
             ChannelQuotas quotas,
-            X509Certificate2 clientCertificate,
-            X509Certificate2Collection clientCertificateChain,
-            X509Certificate2 serverCertificate,
+            ICertificate clientCertificate,
+            ICertificateCollection clientCertificateChain,
+            ICertificate serverCertificate,
             EndpointDescription endpoint)
         :
             base(
@@ -541,7 +541,7 @@ namespace Opc.Ua.Bindings
 
             // parse the security header.
             uint channelId = 0;
-            X509Certificate2 serverCertificate = null;
+            ICertificate serverCertificate = null;
             uint requestId = 0;
             uint sequenceNumber = 0;
 

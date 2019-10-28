@@ -335,13 +335,13 @@ namespace Opc.Ua.Server
                 }
 
                 // validate client application instance certificate.
-                X509Certificate2 parsedClientCertificate = null;
+                ICertificate parsedClientCertificate = null;
 
                 if (requireEncryption && clientCertificate != null && clientCertificate.Length > 0)
                 {
                     try
                     {
-                        X509Certificate2Collection clientCertificateChain = Utils.ParseCertificateChainBlob(clientCertificate);
+                        ICertificateCollection clientCertificateChain = Utils.ParseCertificateChainBlob(clientCertificate);
                         parsedClientCertificate = clientCertificateChain[0];
 
                         if (context.SecurityPolicyUri != SecurityPolicies.None)

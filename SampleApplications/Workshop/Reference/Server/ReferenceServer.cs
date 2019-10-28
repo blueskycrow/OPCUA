@@ -253,7 +253,7 @@ namespace Quickstarts.ReferenceServer
         /// <summary>
         /// Verifies that a certificate user token is trusted.
         /// </summary>
-        private void VerifyUserTokenCertificate(X509Certificate2 certificate)
+        private void VerifyUserTokenCertificate(ICertificate certificate)
         {
             try
             {
