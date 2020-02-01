@@ -807,18 +807,15 @@ namespace Opc.Ua
                 encoder.WriteByteString(null, secret);
 
                 // add padding.
-                if (!useAuthenticatedEncryption)
+                int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
+                paddingSize %= iv.Length;
+
+                for (int ii = 0; ii < paddingSize; ii++)
                 {
-                    int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
-                    paddingSize %= iv.Length;
-
-                    for (int ii = 0; ii < paddingSize; ii++)
-                    {
-                        encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
-                    }
-
-                    encoder.WriteUInt16(null, (ushort)paddingSize);
+                    encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
                 }
+
+                encoder.WriteUInt16(null, (ushort)paddingSize);
 
                 dataToEncrypt = encoder.CloseAndReturnBuffer();
             }
@@ -914,7 +911,30 @@ namespace Opc.Ua
                     $"PlainText not the expected size. [{count} != {length}]");
             }
 
-            return new ArraySegment<byte>(plaintext);
+            ushort paddingSize = plaintext[length-1];
+            paddingSize <<= 8;
+            paddingSize += plaintext[length - 2];
+
+            int notvalid = (paddingSize < length) ? 0 : 1;
+            int start = length - paddingSize - 2;
+
+            for (int ii = 0; ii < length - 2 && ii < paddingSize; ii++)
+            {
+                if (start < 0 || start + ii >= plaintext.Length)
+                {
+                    notvalid |= 1;
+                    continue;
+                }
+
+                notvalid |= plaintext[start + ii] ^ (paddingSize & 0xFF);
+            }
+            
+            if (notvalid != 0)
+            {
+                throw new ServiceResultException(StatusCodes.BadNonceInvalid);
+            }
+
+            return new ArraySegment<byte>(plaintext, 0, start);
         }
 
         private ArraySegment<byte> DecryptSecret(

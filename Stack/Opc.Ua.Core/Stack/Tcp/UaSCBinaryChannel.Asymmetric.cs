@@ -1204,7 +1204,6 @@ namespace Opc.Ua.Bindings
                     return RsaPkcs15_Sign(dataToSign, senderCertificate, HashAlgorithmName.SHA256);
                 }
 
-
                 case SecurityPolicies.Aes128_Sha256_nistP256:
                 case SecurityPolicies.Aes128_Sha256_brainpoolP256r1:
                 case SecurityPolicies.ChaCha20Poly1305_curve25519:

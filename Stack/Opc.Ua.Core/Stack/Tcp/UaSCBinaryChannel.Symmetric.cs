@@ -281,7 +281,7 @@ namespace Opc.Ua.Bindings
         static readonly byte[] s_HkdfAes256SignOnlyKeyLength = BitConverter.GetBytes((ushort)48);
         static readonly byte[] s_HkdfAes128SignAndEncryptKeyLength = BitConverter.GetBytes((ushort)64);
         static readonly byte[] s_HkdfAes256SignAndEncryptKeyLength = BitConverter.GetBytes((ushort)96);
-        static readonly byte[] s_HkdfChaCha20Poly1305KeyLength = BitConverter.GetBytes((ushort)160);
+        static readonly byte[] s_HkdfChaCha20Poly1305KeyLength = BitConverter.GetBytes((ushort)76);
 
         /// <summary>
         /// Computes the keys for a token.
@@ -906,7 +906,7 @@ namespace Opc.Ua.Bindings
                         break;
                     }
 
-                    SymmetricSignWithPoly1305(token, dataToEncrypt, useClientKeys);
+                    SymmetricSignWithPoly1305(token, m_localSequenceNumber, dataToEncrypt, useClientKeys);
                     break;
                 }
                     
@@ -951,7 +951,7 @@ namespace Opc.Ua.Bindings
                         break;
                     }
 
-                    SymmetricVerifyWithPoly1305(token, dataToDecrypt, useClientKeys);
+                    SymmetricVerifyWithPoly1305(token, m_remoteSequenceNumber, dataToDecrypt, useClientKeys);
                     break;
                 }
 
@@ -1194,13 +1194,13 @@ namespace Opc.Ua.Bindings
         private static void ApplyChaCha20Poly1305Mask(ChannelToken token, uint lastSequenceNumber, byte[] iv)
         {
             iv[0] ^= (byte)((token.TokenId & 0x000000FF));
-            iv[1] ^= (byte)((token.TokenId & 0x0000FF00) << 8);
-            iv[2] ^= (byte)((token.TokenId & 0x00FF0000) << 16);
-            iv[3] ^= (byte)((token.TokenId & 0xFF000000) << 24);
+            iv[1] ^= (byte)((token.TokenId & 0x0000FF00) >> 8);
+            iv[2] ^= (byte)((token.TokenId & 0x00FF0000) >> 16);
+            iv[3] ^= (byte)((token.TokenId & 0xFF000000) >> 24);
             iv[4] ^= (byte)((lastSequenceNumber & 0x000000FF));
-            iv[5] ^= (byte)((lastSequenceNumber & 0x0000FF00) << 8);
-            iv[6] ^= (byte)((lastSequenceNumber & 0x00FF0000) << 16);
-            iv[7] ^= (byte)((lastSequenceNumber & 0xFF000000) << 24);
+            iv[5] ^= (byte)((lastSequenceNumber & 0x0000FF00) >> 8);
+            iv[6] ^= (byte)((lastSequenceNumber & 0x00FF0000) >> 16);
+            iv[7] ^= (byte)((lastSequenceNumber & 0xFF000000) >> 24);
         }
 
         /// <summary>
@@ -1281,6 +1281,7 @@ namespace Opc.Ua.Bindings
         /// </summary>
         private static void SymmetricSignWithPoly1305(
             ChannelToken token,
+            uint lastSequenceNumber,
             ArraySegment<byte> dataToEncrypt,
             bool useClientKeys)
         {
@@ -1290,6 +1291,8 @@ namespace Opc.Ua.Bindings
             {
                 throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "Token missing symmetric key object.");
             }
+
+            ApplyChaCha20Poly1305Mask(token, lastSequenceNumber, signingKey);
 
             // Utils.Trace($"SigningKey={Utils.ToHexString(signingKey)}");
 
@@ -1386,6 +1389,7 @@ namespace Opc.Ua.Bindings
         /// </summary>
         private static void SymmetricVerifyWithPoly1305(
             ChannelToken token,
+            uint lastSequenceNumber,
             ArraySegment<byte> dataToDecrypt,
             bool useClientKeys)
         {
@@ -1396,6 +1400,7 @@ namespace Opc.Ua.Bindings
                 throw ServiceResultException.Create(StatusCodes.BadSecurityChecksFailed, "Token missing symmetric key object.");
             }
 
+            ApplyChaCha20Poly1305Mask(token, lastSequenceNumber, signingKey);
             // Utils.Trace($"SigningKey={Utils.ToHexString(signingKey)}");
 
             int signatureLength = 16;
