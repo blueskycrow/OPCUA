@@ -810,6 +810,11 @@ namespace Opc.Ua
                 int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
                 paddingSize %= iv.Length;
 
+                if (secret.Length < iv.Length)
+                {
+                    paddingSize += iv.Length;
+                }
+
                 for (int ii = 0; ii < paddingSize; ii++)
                 {
                     encoder.WriteByte(null, (byte)(paddingSize & 0xFF));
@@ -904,11 +909,11 @@ namespace Opc.Ua
             int length = decryptor.ProcessBytes(dataToDecrypt, offset, count, plaintext, 0);
             length += decryptor.DoFinal(plaintext, length);
 
-            if (plaintext.Length != length)
+            if (plaintext.Length != length || plaintext.Length < iv.Length)
             {
                 throw ServiceResultException.Create(
                     StatusCodes.BadSecurityChecksFailed,
-                    $"PlainText not the expected size. [{count} != {length}]");
+                    $"PlainText not the expected size or too short. [{count} != {length}]");
             }
 
             ushort paddingSize = plaintext[length-1];

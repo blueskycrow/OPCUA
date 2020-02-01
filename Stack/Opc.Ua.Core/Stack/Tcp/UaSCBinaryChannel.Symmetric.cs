@@ -1294,6 +1294,11 @@ namespace Opc.Ua.Bindings
 
             ApplyChaCha20Poly1305Mask(token, lastSequenceNumber, signingKey);
 
+            using (var hash = SHA256.Create())
+            {
+                signingKey = hash.ComputeHash(signingKey);
+            }
+
             // Utils.Trace($"SigningKey={Utils.ToHexString(signingKey)}");
 
             int signatureLength = 16;
@@ -1402,6 +1407,11 @@ namespace Opc.Ua.Bindings
 
             ApplyChaCha20Poly1305Mask(token, lastSequenceNumber, signingKey);
             // Utils.Trace($"SigningKey={Utils.ToHexString(signingKey)}");
+
+            using (var hash = SHA256.Create())
+            {
+                signingKey = hash.ComputeHash(signingKey);
+            }
 
             int signatureLength = 16;
 
