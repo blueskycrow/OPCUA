@@ -810,7 +810,7 @@ namespace Opc.Ua
                 int paddingSize = (iv.Length - ((encoder.Position + 2) % iv.Length));
                 paddingSize %= iv.Length;
 
-                if (secret.Length < iv.Length)
+                if (secret.Length + paddingSize < iv.Length)
                 {
                     paddingSize += iv.Length;
                 }
