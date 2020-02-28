@@ -259,6 +259,12 @@ namespace Opc.Ua.Server
                     application);
             }
 
+            foreach (EndpointDescription ed in endpoints)
+            {
+                ICertificate serverCertificate = new ICertificate(ed.ServerCertificate);
+                Utils.Trace($"ENDPOINT RETURNED: {SecurityPolicies.GetDisplayName(ed.SecurityPolicyUri)} {ed.SecurityMode} {serverCertificate.Subject}");
+            }
+
             return endpoints;
         }
 
