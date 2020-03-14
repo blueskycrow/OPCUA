@@ -102,7 +102,7 @@ namespace Opc.Ua
                     agreement.CalculateAgreement(key, secret, 0);
 
                     HkdfBytesGenerator generator = new HkdfBytesGenerator(new Sha256Digest());
-                    generator.Init(new HkdfParameters(secret, salt, null));
+                    generator.Init(new HkdfParameters(secret, salt, salt));
 
                     byte[] output = new byte[length];
                     generator.GenerateBytes(output, 0, output.Length);
@@ -119,7 +119,7 @@ namespace Opc.Ua
                     agreement.CalculateAgreement(key, secret, 0);
 
                     HkdfBytesGenerator generator = new HkdfBytesGenerator(new Sha256Digest());
-                    generator.Init(new HkdfParameters(secret, salt, null));
+                    generator.Init(new HkdfParameters(secret, salt, salt));
 
                     byte[] output = new byte[length];
                     generator.GenerateBytes(output, 0, output.Length);
