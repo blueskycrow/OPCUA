@@ -40,7 +40,7 @@ namespace Opc.Ua.Export
         /// <returns>The set of nodes</returns>
         public static UANodeSet Read(Stream istrm)
         {
-            StreamReader reader = new StreamReader(istrm);
+            XmlTextReader reader = new XmlTextReader(istrm);
 
             try
             {
@@ -49,7 +49,7 @@ namespace Opc.Ua.Export
             }
             finally
             {
-                reader.Dispose();
+                reader.Close();
             }
         }
 
@@ -59,7 +59,8 @@ namespace Opc.Ua.Export
         /// <param name="istrm">The input stream.</param>
         public void Write(Stream istrm)
         {
-            StreamWriter writer = new StreamWriter(istrm, Encoding.UTF8);
+            XmlTextWriter writer = new XmlTextWriter(istrm, Encoding.UTF8);
+            writer.Formatting = Formatting.Indented;
 
             try
             {
@@ -68,8 +69,7 @@ namespace Opc.Ua.Export
             }
             finally
             {
-                writer.Flush();
-                writer.Dispose();
+                writer.Close();
             }
         }
         #endregion
@@ -123,7 +123,7 @@ namespace Opc.Ua.Export
         /// <summary>
         /// Adds a node to the set.
         /// </summary>
-        public void Export(ISystemContext context, NodeState node, bool outputRedundantNames =true)
+        public void Export(ISystemContext context, NodeState node, bool outputRedundantNames = true)
         {
             if (node == null) throw new ArgumentNullException(nameof(node));
 
@@ -276,6 +276,7 @@ namespace Opc.Ua.Export
 
             exportedNode.NodeId = Export(node.NodeId, context.NamespaceUris);
             exportedNode.BrowseName = Export(node.BrowseName, context.NamespaceUris);
+            exportedNode.Documentation = node.Documentation;
 
             if (outputRedundantNames || node.DisplayName.Text != node.BrowseName.Name)
             {
@@ -617,6 +618,7 @@ namespace Opc.Ua.Export
             importedNode.NodeId = ImportNodeId(node.NodeId, context.NamespaceUris, false);
             importedNode.BrowseName = ImportQualifiedName(node.BrowseName, context.NamespaceUris);
             importedNode.DisplayName = Import(node.DisplayName);
+            importedNode.Documentation = node.Documentation;
 
             if (importedNode.DisplayName == null)
             {
@@ -901,13 +903,14 @@ namespace Opc.Ua.Export
                 {
                     List<Opc.Ua.Export.DataTypeField> fields = new List<DataTypeField>();
 
-                    foreach (StructureField field in structureDefinition.Fields)
+                    for (int ii = structureDefinition.FirstExplicitFieldIndex; ii < structureDefinition.Fields.Count; ii++)
                     {
+                        StructureField field = structureDefinition.Fields[ii];
+
                         Opc.Ua.Export.DataTypeField output = new Opc.Ua.Export.DataTypeField();
 
                         output.Name = field.Name;
                         output.Description = Export(new Opc.Ua.LocalizedText[] { field.Description });
-                        output.IsOptional = field.IsOptional;
 
                         if (NodeId.IsNull(field.DataType))
                         {
@@ -940,7 +943,6 @@ namespace Opc.Ua.Export
                         Opc.Ua.Export.DataTypeField output = new Opc.Ua.Export.DataTypeField();
 
                         output.Name = field.Name;
-                        output.DisplayName = Export(new Opc.Ua.LocalizedText[] { field.Name });
                         output.Description = Export(new Opc.Ua.LocalizedText[] { field.Description });
                         output.ValueRank = ValueRanks.Scalar;
                         output.Value = (int)field.Value;
@@ -1009,6 +1011,7 @@ namespace Opc.Ua.Export
 
                         structureDefinition.Fields = fields.ToArray();
                     }
+
                     definition = structureDefinition;
                 }
                 else

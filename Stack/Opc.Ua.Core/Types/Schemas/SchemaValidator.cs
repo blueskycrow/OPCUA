@@ -178,7 +178,7 @@ namespace Opc.Ua.Schema
                 }
 
                 // load embedded resource.
-                return LoadResource(type, location, null);
+                return LoadResource(type, location, Assembly.GetCallingAssembly());
             }
 
             if (!String.IsNullOrEmpty(path))

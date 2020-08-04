@@ -23,7 +23,7 @@ namespace Opc.Ua
     /// <summary>
     /// The base class for custom nodes.
     /// </summary>
-    public abstract class NodeState : IDisposable, IFormattable
+    public abstract partial class NodeState : IDisposable, IFormattable
     {
         #region Constructors
         /// <summary>
@@ -112,6 +112,7 @@ namespace Opc.Ua
             m_browseName = source.m_browseName;
             m_displayName = source.m_displayName;
             m_description = source.m_description;
+            Documentation = source.Documentation;
             m_writeMask = source.m_writeMask;
             m_children = null;
             m_references = null;
@@ -319,6 +320,14 @@ namespace Opc.Ua
         }
 
         /// <summary>
+        /// The documentation for the node that is saved in the NodeSet.
+        /// </summary>
+        public string Documentation
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// Specifies which attributes are writeable.
         /// </summary>
         /// <value>A description for the AttributeWriteMask of the node fields.</value>
@@ -479,10 +488,10 @@ namespace Opc.Ua
                 case NodeClass.View: { node = new ViewNode(); break; }
 
                 default:
-                    {
-                        node = new Node();
-                        break;
-                    }
+                {
+                    node = new Node();
+                    break;
+                }
             }
 
             Export(context, node);
@@ -505,7 +514,7 @@ namespace Opc.Ua
                 children[ii].Export(context, table);
             }
         }
-    
+
         /// <summary>
         /// Exports a copy of the node to a node table.
         /// </summary>
@@ -1012,9 +1021,9 @@ namespace Opc.Ua
                 {
                     BaseInstanceState child = UpdateChild(context, decoder);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    throw;
+                    throw e;
                 }
             }
         }
@@ -2079,7 +2088,7 @@ namespace Opc.Ua
         /// An event which allows multiple sinks to be notified when the OnStateChanged callback is called.
         /// </summary>
         public event NodeStateChangedHandler StateChanged;
-        #endregion 
+        #endregion
 
         #region Callback Handlers
         /// <summary>
@@ -2933,7 +2942,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Populates a table with all references in the hierarchy. 
+        /// Populates a table with all references in the hierarchy.
         /// </summary>
         /// <param name="context">The context for the current operation.</param>
         /// <param name="browsePath">The path to the parent object.</param>
@@ -4130,7 +4139,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Adds a child to the node. 
+        /// Adds a child to the node.
         /// </summary>
         public void AddChild(BaseInstanceState child)
         {
@@ -4185,7 +4194,7 @@ namespace Opc.Ua
         }
 
         /// <summary>
-        /// Adds a child from the node. 
+        /// Adds a child from the node.
         /// </summary>
         public void RemoveChild(BaseInstanceState child)
         {
@@ -4308,7 +4317,7 @@ namespace Opc.Ua
                 return ReadAttribute(context, attributeId, NumericRange.Empty, null, dataValue);
             }
 
-            // find the child at the current level. 
+            // find the child at the current level.
             BaseInstanceState child = FindChild(context, relativePath[index], false, null);
 
             if (child == null)
@@ -4513,7 +4522,7 @@ namespace Opc.Ua
         /// <param name="children">The list of children to populate.</param>
         /// <remarks>
         /// This method returns the children that are in memory and does not attempt to
-        /// access an underlying system. The PopulateBrowser method is used to discover those references. 
+        /// access an underlying system. The PopulateBrowser method is used to discover those references.
         /// </remarks>
         public virtual void GetChildren(
             ISystemContext context,
@@ -4534,11 +4543,11 @@ namespace Opc.Ua
         /// <param name="context">The context for the system being accessed.</param>
         /// <param name="references">The list of references to populate.</param>
         /// <remarks>
-        /// This method only returns references that are not implied by the parent-child 
+        /// This method only returns references that are not implied by the parent-child
         /// relation or references which are intrinsic to the NodeState classes (e.g. HasTypeDefinition)
-        /// 
+        ///
         /// This method also only returns the reference that are in memory and does not attempt to
-        /// access an underlying system. The PopulateBrowser method is used to discover those references.        
+        /// access an underlying system. The PopulateBrowser method is used to discover those references.
         /// </remarks>
         public virtual void GetReferences(
             ISystemContext context,
