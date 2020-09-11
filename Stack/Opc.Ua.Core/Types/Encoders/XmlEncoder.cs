@@ -39,6 +39,8 @@ namespace Opc.Ua
             XmlWriterSettings settings = new XmlWriterSettings();
             settings.CheckCharacters = false;
             settings.ConformanceLevel = ConformanceLevel.Auto;
+            settings.NamespaceHandling = NamespaceHandling.OmitDuplicates;
+            settings.NewLineHandling = NewLineHandling.Replace;
 
             m_writer = XmlWriter.Create(m_destination, settings);
         }
@@ -443,7 +445,11 @@ namespace Opc.Ua
                     throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
                 }
 
-                m_writer.WriteString(value);
+                if (!String.IsNullOrWhiteSpace(value))
+                {
+                    m_writer.WriteString(value);
+                }
+
                 EndField(fieldName);
             }
         }
@@ -684,8 +690,15 @@ namespace Opc.Ua
 
                 if (value != null)
                 {
-                    WriteString("Locale", value.Locale);
-                    WriteString("Text", value.Text);
+                    if (!String.IsNullOrEmpty(value.Locale))
+                    {
+                        WriteString("Locale", value.Locale);
+                    }
+
+                    if (!String.IsNullOrEmpty(value.Text))
+                    {
+                        WriteString("Text", value.Text);
+                    }
                 }
 
                 PopNamespace();

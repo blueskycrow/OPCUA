@@ -1334,7 +1334,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteBooleanArray(string fieldName, IList<bool> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1361,7 +1361,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteSByteArray(string fieldName, IList<sbyte> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1388,7 +1388,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteByteArray(string fieldName, IList<byte> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1415,7 +1415,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteInt16Array(string fieldName, IList<short> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1442,7 +1442,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteUInt16Array(string fieldName, IList<ushort> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1469,7 +1469,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteInt32Array(string fieldName, IList<int> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1496,7 +1496,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteUInt32Array(string fieldName, IList<uint> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1523,7 +1523,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteInt64Array(string fieldName, IList<long> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1550,7 +1550,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteUInt64Array(string fieldName, IList<ulong> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1577,7 +1577,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteFloatArray(string fieldName, IList<float> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1604,7 +1604,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDoubleArray(string fieldName, IList<double> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1631,7 +1631,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteStringArray(string fieldName, IList<string> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1658,7 +1658,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDateTimeArray(string fieldName, IList<DateTime> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1692,7 +1692,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteGuidArray(string fieldName, IList<Uuid> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1719,7 +1719,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteGuidArray(string fieldName, IList<Guid> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1746,7 +1746,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteByteStringArray(string fieldName, IList<byte[]> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1773,7 +1773,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteXmlElementArray(string fieldName, IList<XmlElement> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1800,7 +1800,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteNodeIdArray(string fieldName, IList<NodeId> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1827,7 +1827,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteExpandedNodeIdArray(string fieldName, IList<ExpandedNodeId> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1854,7 +1854,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteStatusCodeArray(string fieldName, IList<StatusCode> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1889,7 +1889,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDiagnosticInfoArray(string fieldName, IList<DiagnosticInfo> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1916,7 +1916,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteQualifiedNameArray(string fieldName, IList<QualifiedName> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1943,7 +1943,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteLocalizedTextArray(string fieldName, IList<LocalizedText> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -1970,7 +1970,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteVariantArray(string fieldName, IList<Variant> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -2003,7 +2003,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteDataValueArray(string fieldName, IList<DataValue> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -2030,7 +2030,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteExtensionObjectArray(string fieldName, IList<ExtensionObject> values)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -2057,7 +2057,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteEncodeableArray(string fieldName, IList<IEncodeable> values, System.Type systemType)
         {
-            if (values == null)
+            if (values == null || values.Count == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -2084,7 +2084,7 @@ namespace Opc.Ua
         /// </summary>
         public void WriteEnumeratedArray(string fieldName, Array values, System.Type systemType)
         {
-            if (values == null)
+            if (values == null || values.Length == 0)
             {
                 WriteSimpleField(fieldName, null, false);
                 return;
@@ -2310,6 +2310,12 @@ namespace Opc.Ua
         /// </summary>
         public void WriteObjectArray(string fieldName, IList<object> values)
         {
+            if (values == null || values.Count == 0)
+            {
+                WriteSimpleField(fieldName, null, false);
+                return;
+            }
+
             PushArray(fieldName);
 
             if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
