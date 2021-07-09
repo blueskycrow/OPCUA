@@ -25,37 +25,106 @@ namespace Opc.Ua
     public class JsonEncoder : IEncoder, IDisposable
     {
         #region Private Fields
-        private MemoryStream m_destination;
+        private const int kStreamWriterBufferSize = 8192;
+        private Stream m_stream;
+        private MemoryStream m_memoryStream;
         private StreamWriter m_writer;
         private Stack<string> m_namespaces;
         private bool m_commaRequired;
         private bool m_inVariantWithEncoding;
-        private ServiceMessageContext m_context;
+        private IServiceMessageContext m_context;
         private ushort[] m_namespaceMappings;
         private ushort[] m_serverMappings;
         private uint m_nestingLevel;
         private bool m_topLevelIsArray;
         private bool m_levelOneSkipped;
         private bool m_dontWriteClosing;
+        private bool m_leaveOpen;
         #endregion
 
         #region Constructors
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="useReversibleEncoding"></param>
+        public JsonEncoder(
+            IServiceMessageContext context,
+            bool useReversibleEncoding) :
+            this(context, useReversibleEncoding, false, null, false)
+        {
+        }
+
+        /// <summary>
         /// Initializes the object with default values.
         /// </summary>
         public JsonEncoder(
-            ServiceMessageContext context,
+            IServiceMessageContext context,
             bool useReversibleEncoding,
-            StreamWriter writer = null,
+            bool topLevelIsArray = false,
+            Stream stream = null,
+            bool leaveOpen = false
+            )
+        {
+            Initialize();
+
+            m_context = context;
+            m_stream = stream;
+            m_leaveOpen = leaveOpen;
+            UseReversibleEncoding = useReversibleEncoding;
+            m_topLevelIsArray = topLevelIsArray;
+
+            if (m_stream == null)
+            {
+                m_memoryStream = new MemoryStream();
+                m_writer = new StreamWriter(m_memoryStream, new UTF8Encoding(false), kStreamWriterBufferSize, false);
+                m_leaveOpen = false;
+            }
+            else
+            {
+                m_writer = new StreamWriter(m_stream, new UTF8Encoding(false), kStreamWriterBufferSize, m_leaveOpen);
+            }
+
+            InitializeWriter();
+        }
+
+        /// <summary>
+        /// Initializes the object with default values.
+        /// </summary>
+        [Obsolete("Use Constructor with Stream parameter instead.")]
+        public JsonEncoder(
+            IServiceMessageContext context,
+            bool useReversibleEncoding,
+            StreamWriter writer,
             bool topLevelIsArray = false)
         {
             Initialize();
 
             m_context = context;
-            m_nestingLevel = 0;
             m_writer = writer;
             UseReversibleEncoding = useReversibleEncoding;
             m_topLevelIsArray = topLevelIsArray;
+
+            if (m_writer == null)
+            {
+                m_stream = new MemoryStream();
+                m_writer = new StreamWriter(m_stream, new UTF8Encoding(false), kStreamWriterBufferSize);
+            }
+
+            InitializeWriter();
+        }
+
+        /// <summary>
+        /// Sets private members to default values.
+        /// </summary>
+        private void Initialize()
+        {
+            m_stream = null;
+            m_writer = null;
+            m_namespaces = new Stack<string>();
+            m_commaRequired = false;
+            m_leaveOpen = false;
+            m_nestingLevel = 0;
             m_levelOneSkipped = false;
 
             // defaults for JSON encoding
@@ -66,13 +135,13 @@ namespace Opc.Ua
             ForceNamespaceUri = false;
             IncludeDefaultValues = false;
             IncludeDefaultNumberValues = true;
+        }
 
-            if (m_writer == null)
-            {
-                m_destination = new MemoryStream();
-                m_writer = new StreamWriter(m_destination, new UTF8Encoding(false));
-            }
-
+        /// <summary>
+        /// Initialize Writer.
+        /// </summary>
+        private void InitializeWriter()
+        {
             if (m_topLevelIsArray)
             {
                 m_writer.Write("[");
@@ -82,38 +151,19 @@ namespace Opc.Ua
                 m_writer.Write("{");
             }
         }
-
-        /// <summary>
-        /// Sets private members to default values.
-        /// </summary>
-        private void Initialize()
-        {
-            m_destination = null;
-            m_writer = null;
-            m_namespaces = new Stack<string>();
-            m_commaRequired = false;
-        }
-
-        /// <summary>
-        /// Writes the root element to the stream.
-        /// </summary>
-        private void Initialize(string fieldName, string namespaceUri)
-        {
-        }
         #endregion
 
         #region Public Methods
         /// <summary>
         /// Encodes a session-less message to a buffer.
         /// </summary>
-        public static void EncodeSessionLessMessage(IEncodeable message, Stream stream, ServiceMessageContext context, bool leaveOpen = false)
+        public static void EncodeSessionLessMessage(IEncodeable message, Stream stream, IServiceMessageContext context, bool leaveOpen = false)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
             if (context == null) throw new ArgumentNullException(nameof(context));
 
             // create encoder.
-            JsonEncoder encoder = new JsonEncoder(context, true, new StreamWriter(stream, new UTF8Encoding(false), 65535, leaveOpen));
-
+            JsonEncoder encoder = new JsonEncoder(context, true, false, stream, leaveOpen);
             try
             {
                 long start = stream.Position;
@@ -143,25 +193,24 @@ namespace Opc.Ua
             {
                 if (leaveOpen)
                 {
-                    encoder.m_writer.Flush();
                     stream.Position = 0;
                 }
+                encoder.Dispose();
             }
         }
 
         /// <summary>
         /// Encodes a message in a stream.
         /// </summary>
-        public static ArraySegment<byte> EncodeMessage(IEncodeable message, byte[] buffer, ServiceMessageContext context)
+        public static ArraySegment<byte> EncodeMessage(IEncodeable message, byte[] buffer, IServiceMessageContext context)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
             if (buffer == null) throw new ArgumentNullException(nameof(buffer));
             if (context == null) throw new ArgumentNullException(nameof(context));
 
             using (MemoryStream stream = new MemoryStream(buffer, true))
+            using (var encoder = new JsonEncoder(context, true, false, stream))
             {
-                var encoder = new JsonEncoder(context, true, new StreamWriter(stream, new UTF8Encoding(false), 65535, false));
-
                 // encode message
                 encoder.EncodeMessage(message);
                 int length = encoder.Close();
@@ -215,11 +264,15 @@ namespace Opc.Ua
         public string CloseAndReturnText()
         {
             Close();
-            if (m_destination == null)
+            if (m_memoryStream == null)
             {
-                return String.Empty;
+                if (m_stream is MemoryStream memoryStream)
+                {
+                    return Encoding.UTF8.GetString(memoryStream.ToArray());
+                }
+                throw new NotSupportedException("Cannot get text from external stream. Use Close or MemoryStream instead.");
             }
-            return Encoding.UTF8.GetString(m_destination.ToArray());
+            return Encoding.UTF8.GetString(m_memoryStream.ToArray());
         }
 
         /// <summary>
@@ -229,20 +282,24 @@ namespace Opc.Ua
         {
             if (!m_dontWriteClosing)
             {
-            if (m_topLevelIsArray)
-            {
-                m_writer.Write("]");
-            }
-            else
-            {
-                m_writer.Write("}");
-            }
+                if (m_topLevelIsArray)
+                {
+                    m_writer.Write("]");
+                }
+                else
+                {
+                    m_writer.Write("}");
+                }
             }
 
             m_writer.Flush();
             int length = (int)m_writer.BaseStream.Position;
             m_writer.Dispose();
             m_writer = null;
+            if (m_leaveOpen)
+            {
+                m_stream.Position = 0;
+            }
             return length;
         }
         #endregion
@@ -280,7 +337,7 @@ namespace Opc.Ua
         /// <summary>
         /// The message context associated with the encoder.
         /// </summary>
-        public ServiceMessageContext Context => m_context;
+        public IServiceMessageContext Context => m_context;
 
         /// <summary>
         /// The Json encoder reversible encoding option
@@ -1044,6 +1101,7 @@ namespace Opc.Ua
             PushStructure(fieldName);
 
             WriteString("Name", value.Name);
+
             WriteNamespaceIndex("Uri", value.NamespaceIndex);
 
             PopStructure();
@@ -1076,6 +1134,24 @@ namespace Opc.Ua
             else
             {
                 WriteSimpleField(fieldName, value.Text, true);
+            }
+        }
+
+        /// <summary>
+        /// Writes an Variant to the stream with the especified reversible encoding parameter
+        /// </summary>
+        public void WriteVariant(string fieldName, Variant value, bool useReversibleEncoding)
+        {
+            bool currentValue = UseReversibleEncoding;
+
+            try
+            {
+                UseReversibleEncoding = useReversibleEncoding;
+                WriteVariant(fieldName, value);
+            }
+            finally
+            {
+                UseReversibleEncoding = currentValue;
             }
         }
 
@@ -1227,6 +1303,7 @@ namespace Opc.Ua
             var encodeable = value.Body as IEncodeable;
             if (!UseReversibleEncoding && encodeable != null)
             {
+                // non reversible encoding, only the content of the Body field is encoded
                 var structureType = value.Body as IStructureTypeInfo;
                 if (structureType != null &&
                     structureType.StructureType == StructureType.Union)
@@ -2138,18 +2215,18 @@ namespace Opc.Ua
             {
                 PushArray(fieldName);
 
-	            // check the length.
-	            if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
-	            {
-	                throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
-	            }
+                // check the length.
+                if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
+                {
+                    throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
+                }
 
-	            for (int ii = 0; ii < values.Count; ii++)
-	            {
-	                WriteEncodeable(null, values[ii], systemType);
-	            }
+                for (int ii = 0; ii < values.Count; ii++)
+                {
+                    WriteEncodeable(null, values[ii], systemType);
+                }
 
-	            PopArray();
+                PopArray();
             }
         }
 
@@ -2246,146 +2323,30 @@ namespace Opc.Ua
                         case BuiltInType.ExtensionObject: { WriteExtensionObject(null, (ExtensionObject)value); return; }
                         case BuiltInType.DataValue: { WriteDataValue(null, (DataValue)value); return; }
                         case BuiltInType.Enumeration: { WriteEnumerated(null, (Enum)value); return; }
+                        case BuiltInType.DiagnosticInfo: { WriteDiagnosticInfo(null, (DiagnosticInfo)value); return; }
                     }
                 }
-
-                // write array.
-                else if (typeInfo.ValueRank <= 1)
+                // write array
+                else if (typeInfo.ValueRank >= ValueRanks.OneDimension)
                 {
-                    switch (typeInfo.BuiltInType)
-                    {
-                        case BuiltInType.Boolean: { WriteBooleanArray(null, (bool[])value); return; }
-                        case BuiltInType.SByte: { WriteSByteArray(null, (sbyte[])value); return; }
-                        case BuiltInType.Byte: { WriteByteArray(null, (byte[])value); return; }
-                        case BuiltInType.Int16: { WriteInt16Array(null, (short[])value); return; }
-                        case BuiltInType.UInt16: { WriteUInt16Array(null, (ushort[])value); return; }
-                        case BuiltInType.Int32: { WriteInt32Array(null, (int[])value); return; }
-                        case BuiltInType.UInt32: { WriteUInt32Array(null, (uint[])value); return; }
-                        case BuiltInType.Int64: { WriteInt64Array(null, (long[])value); return; }
-                        case BuiltInType.UInt64: { WriteUInt64Array(null, (ulong[])value); return; }
-                        case BuiltInType.Float: { WriteFloatArray(null, (float[])value); return; }
-                        case BuiltInType.Double: { WriteDoubleArray(null, (double[])value); return; }
-                        case BuiltInType.String: { WriteStringArray(null, (string[])value); return; }
-                        case BuiltInType.DateTime: { WriteDateTimeArray(null, (DateTime[])value); return; }
-                        case BuiltInType.Guid: { WriteGuidArray(null, (Uuid[])value); return; }
-                        case BuiltInType.ByteString: { WriteByteStringArray(null, (byte[][])value); return; }
-                        case BuiltInType.XmlElement: { WriteXmlElementArray(null, (XmlElement[])value); return; }
-                        case BuiltInType.NodeId: { WriteNodeIdArray(null, (NodeId[])value); return; }
-                        case BuiltInType.ExpandedNodeId: { WriteExpandedNodeIdArray(null, (ExpandedNodeId[])value); return; }
-                        case BuiltInType.StatusCode: { WriteStatusCodeArray(null, (StatusCode[])value); return; }
-                        case BuiltInType.QualifiedName: { WriteQualifiedNameArray(null, (QualifiedName[])value); return; }
-                        case BuiltInType.LocalizedText: { WriteLocalizedTextArray(null, (LocalizedText[])value); return; }
-                        case BuiltInType.ExtensionObject: { WriteExtensionObjectArray(null, (ExtensionObject[])value); return; }
-                        case BuiltInType.DataValue: { WriteDataValueArray(null, (DataValue[])value); return; }
-                        case BuiltInType.Enumeration:
-                        {
-                            Array array = value as Array;
-                            WriteEnumeratedArray(null, array, array.GetType().GetElementType());
-                            return;
-                        }
-
-                        case BuiltInType.Variant:
-                        {
-                            Variant[] variants = value as Variant[];
-
-                            if (variants != null)
-                            {
-                                WriteVariantArray(null, variants);
-                                return;
-                            }
-
-                            object[] objects = value as object[];
-
-                            if (objects != null)
-                            {
-                                WriteObjectArray(null, objects);
-                                return;
-                            }
-
-                            throw ServiceResultException.Create(
-                                StatusCodes.BadEncodingError,
-                                "Unexpected type encountered while encoding an array of Variants: {0}",
-                                value.GetType());
-                        }
-                    }
-                }
-
-                // write matrix.
-                else if (typeInfo.ValueRank > 1)
-                {
+                    int valueRank = typeInfo.ValueRank;
                     Matrix matrix = value as Matrix;
                     if (matrix != null)
                     {
                         if (UseReversibleEncoding)
                         {
-                            WriteVariantContents(matrix.Elements, new TypeInfo(typeInfo.BuiltInType, 1));
+                            // linearize the matrix
+                            value = matrix.Elements;
+                            valueRank = ValueRanks.OneDimension;
                         }
-                        else
-                        {
-                            int index = 0;
-                            WriteStructureMatrix(matrix, 0, ref index, typeInfo);
-                        }
-                        return;
                     }
+                    WriteArray(null, value, valueRank, typeInfo.BuiltInType);
                 }
-
-                // oops - should never happen.
-                throw new ServiceResultException(
-                    StatusCodes.BadEncodingError,
-                    Utils.Format("Type '{0}' is not allowed in an Variant.", value.GetType().FullName));
             }
             finally
             {
                 m_inVariantWithEncoding = false;
             }
-        }
-        #endregion
-
-        #region Private Methods
-        /// <summary>
-        /// Write multi dimensional array in structure.
-        /// </summary>
-        private void WriteStructureMatrix(
-            Matrix matrix,
-            int dim,
-            ref int index,
-            TypeInfo typeInfo)
-        {
-            var arrayLen = matrix.Dimensions[dim];
-            if (dim == matrix.Dimensions.Length - 1)
-            {
-                // Create a slice of values for the top dimension
-                var copy = Array.CreateInstance(
-                    matrix.Elements.GetType().GetElementType(), arrayLen);
-                Array.Copy(matrix.Elements, index, copy, 0, arrayLen);
-                // Write slice as value rank
-                if (m_commaRequired)
-                {
-                    m_writer.Write(",");
-                }
-                WriteVariantContents(copy, new TypeInfo(typeInfo.BuiltInType, 1));
-                index += arrayLen;
-            }
-            else
-            {
-                PushArray(null);
-                for (var i = 0; i < arrayLen; i++)
-                {
-                    WriteStructureMatrix(matrix, dim + 1, ref index, typeInfo);
-                }
-                PopArray();
-            }
-        }
-
-        /// <summary>
-        /// Write multi dimensional array in Variant.
-        /// </summary>
-        private void WriteVariantMatrix(string fieldName, Matrix value)
-        {
-            PushStructure(fieldName);
-            WriteVariant("Matrix", new Variant(value.Elements, new TypeInfo(value.TypeInfo.BuiltInType, ValueRanks.OneDimension)));
-            WriteInt32Array("Dimensions", value.Dimensions);
-            PopStructure();
         }
 
         /// <summary>
@@ -2401,7 +2362,7 @@ namespace Opc.Ua
 
             PushArray(fieldName);
 
-            if (m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
+            if (values != null && m_context.MaxArrayLength > 0 && m_context.MaxArrayLength < values.Count)
             {
                 throw new ServiceResultException(StatusCodes.BadEncodingLimitsExceeded);
             }
@@ -2416,6 +2377,162 @@ namespace Opc.Ua
 
             PopArray();
         }
+
+        /// <summary>
+        /// Encode an array according to its valueRank and BuiltInType
+        /// </summary>
+        public void WriteArray(string fieldName, object array, int valueRank, BuiltInType builtInType)
+        {
+            // write array.
+            if (valueRank == ValueRanks.OneDimension)
+            {
+                switch (builtInType)
+                {
+                    case BuiltInType.Boolean: { WriteBooleanArray(fieldName, (bool[])array); return; }
+                    case BuiltInType.SByte: { WriteSByteArray(fieldName, (sbyte[])array); return; }
+                    case BuiltInType.Byte: { WriteByteArray(fieldName, (byte[])array); return; }
+                    case BuiltInType.Int16: { WriteInt16Array(fieldName, (short[])array); return; }
+                    case BuiltInType.UInt16: { WriteUInt16Array(fieldName, (ushort[])array); return; }
+                    case BuiltInType.Int32: { WriteInt32Array(fieldName, (int[])array); return; }
+                    case BuiltInType.UInt32: { WriteUInt32Array(fieldName, (uint[])array); return; }
+                    case BuiltInType.Int64: { WriteInt64Array(fieldName, (long[])array); return; }
+                    case BuiltInType.UInt64: { WriteUInt64Array(fieldName, (ulong[])array); return; }
+                    case BuiltInType.Float: { WriteFloatArray(fieldName, (float[])array); return; }
+                    case BuiltInType.Double: { WriteDoubleArray(fieldName, (double[])array); return; }
+                    case BuiltInType.String: { WriteStringArray(fieldName, (string[])array); return; }
+                    case BuiltInType.DateTime: { WriteDateTimeArray(fieldName, (DateTime[])array); return; }
+                    case BuiltInType.Guid: { WriteGuidArray(fieldName, (Uuid[])array); return; }
+                    case BuiltInType.ByteString: { WriteByteStringArray(fieldName, (byte[][])array); return; }
+                    case BuiltInType.XmlElement: { WriteXmlElementArray(fieldName, (XmlElement[])array); return; }
+                    case BuiltInType.NodeId: { WriteNodeIdArray(fieldName, (NodeId[])array); return; }
+                    case BuiltInType.ExpandedNodeId: { WriteExpandedNodeIdArray(fieldName, (ExpandedNodeId[])array); return; }
+                    case BuiltInType.StatusCode: { WriteStatusCodeArray(fieldName, (StatusCode[])array); return; }
+                    case BuiltInType.QualifiedName: { WriteQualifiedNameArray(fieldName, (QualifiedName[])array); return; }
+                    case BuiltInType.LocalizedText: { WriteLocalizedTextArray(fieldName, (LocalizedText[])array); return; }
+                    case BuiltInType.ExtensionObject: { WriteExtensionObjectArray(fieldName, (ExtensionObject[])array); return; }
+                    case BuiltInType.DataValue: { WriteDataValueArray(fieldName, (DataValue[])array); return; }
+                    case BuiltInType.DiagnosticInfo: { WriteDiagnosticInfoArray(fieldName, (DiagnosticInfo[])array); return; }
+                    case BuiltInType.Enumeration:
+                    {
+                        Array enumArray = array as Array;
+                        WriteEnumeratedArray(fieldName, enumArray, enumArray.GetType().GetElementType());
+                        return;
+                    }
+
+                    case BuiltInType.Variant:
+                    {
+                        Variant[] variants = array as Variant[];
+
+                        if (variants != null)
+                        {
+                            WriteVariantArray(fieldName, variants);
+                            return;
+                        }
+
+                        // try to write IEncodeable Array
+                        IEncodeable[] encodeableArray = array as IEncodeable[];
+                        if (encodeableArray != null)
+                        {
+                            WriteEncodeableArray(fieldName, encodeableArray, array.GetType().GetElementType());
+                            return;
+                        }
+
+                        object[] objects = array as object[];
+
+                        if (objects != null)
+                        {
+                            WriteObjectArray(fieldName, objects);
+                            return;
+                        }
+
+                        throw ServiceResultException.Create(
+                            StatusCodes.BadEncodingError,
+                            "Unexpected type encountered while encoding an array of Variants: {0}",
+                            array.GetType());
+                    }
+                }
+            }
+            // write matrix.
+            else if (valueRank > ValueRanks.OneDimension)
+            {
+                Matrix matrix = array as Matrix;
+                if (matrix != null)
+                {
+                    int index = 0;
+                    WriteStructureMatrix(fieldName, matrix, 0, ref index, matrix.TypeInfo);
+                    return;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
+        /// <summary>
+        /// Write multi dimensional array in structure.
+        /// </summary>
+        private void WriteStructureMatrix(
+            string fieldName,
+            Matrix matrix,
+            int dim,
+            ref int index,
+            TypeInfo typeInfo)
+        {
+            // check the nesting level for avoiding a stack overflow.
+            if (m_nestingLevel > m_context.MaxEncodingNestingLevels)
+            {
+                throw ServiceResultException.Create(
+                    StatusCodes.BadEncodingLimitsExceeded,
+                    "Maximum nesting level of {0} was exceeded",
+                    m_context.MaxEncodingNestingLevels);
+            }
+
+            m_nestingLevel++;
+
+            try
+            {
+                var arrayLen = matrix.Dimensions[dim];
+                if (dim == matrix.Dimensions.Length - 1)
+                {
+                    // Create a slice of values for the top dimension
+                    var copy = Array.CreateInstance(
+                        matrix.Elements.GetType().GetElementType(), arrayLen);
+                    Array.Copy(matrix.Elements, index, copy, 0, arrayLen);
+                    // Write slice as value rank
+                    if (m_commaRequired)
+                    {
+                        m_writer.Write(",");
+                    }
+                    WriteVariantContents(copy, new TypeInfo(typeInfo.BuiltInType, 1));
+                    index += arrayLen;
+                }
+                else
+                {
+                    PushArray(fieldName);
+                    for (var i = 0; i < arrayLen; i++)
+                    {
+                        WriteStructureMatrix(null, matrix, dim + 1, ref index, typeInfo);
+                    }
+                    PopArray();
+                }
+            }
+            finally
+            {
+                m_nestingLevel--;
+            }
+        }
+
+        /// <summary>
+        /// Write multi dimensional array in Variant.
+        /// </summary>
+        private void WriteVariantMatrix(string fieldName, Matrix value)
+        {
+            PushStructure(fieldName);
+            WriteVariant("Matrix", new Variant(value.Elements, new TypeInfo(value.TypeInfo.BuiltInType, ValueRanks.OneDimension)));
+            WriteInt32Array("Dimensions", value.Dimensions);
+            PopStructure();
+        }
+
         #endregion
     }
 }

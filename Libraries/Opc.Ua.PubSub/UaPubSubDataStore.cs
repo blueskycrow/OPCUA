@@ -1,5 +1,5 @@
 /* ========================================================================
- * Copyright (c) 2005-2020 The OPC Foundation, Inc. All rights reserved.
+ * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
  * 
@@ -50,9 +50,48 @@ namespace Opc.Ua.PubSub
         {
             m_store = new Dictionary<NodeId, Dictionary<uint, DataValue>>();
         }
-        #endregion  
+        #endregion
 
         #region Read/Write Public Methods
+        /// <summary>
+        /// Write a value to the DataStore. 
+        /// The value is identified by node NodeId.
+        /// </summary>
+        /// <param name="nodeId">NodeId identifier for value that will be stored.</param>
+        /// <param name="value">The value to be store. The value is NOT copied.</param>
+        /// <param name="status">The status associated with the value.</param>
+        /// <param name="timestamp">The timestamp associated with the value.</param>
+        public void WritePublishedDataItem(
+            NodeId nodeId,
+            Variant value,
+            StatusCode? status = null,
+            DateTime? timestamp = null)
+        {
+            if (nodeId == null)
+            {
+                throw new ArgumentException(nameof(nodeId));
+            }
+
+            lock (m_lock)
+            {
+                var dv = new DataValue()
+                {
+                    WrappedValue = value,
+                    StatusCode = status ?? StatusCodes.Good,
+                    SourceTimestamp = timestamp ?? DateTime.UtcNow
+                };
+
+                if (!m_store.ContainsKey(nodeId))
+                {
+                    var dictionary = new Dictionary<uint, DataValue>();
+                    dictionary.Add(Attributes.Value, dv);
+                    m_store.Add(nodeId, dictionary);
+                }
+
+                m_store[nodeId][Attributes.Value] = dv;
+            }
+        }
+
         /// <summary>
         /// Write a DataValue to the DataStore. 
         /// The DataValue is identified by node NodeId and Attribute.
@@ -74,11 +113,6 @@ namespace Opc.Ua.PubSub
             {
                 throw new ArgumentException(nameof(attributeId));
             }
-            //copy instance of dataValue to be stored
-            if (dataValue != null)
-            {
-                dataValue = Utils.Clone(dataValue) as DataValue;
-            }
             lock (m_lock)
             {
                 if (m_store.ContainsKey(nodeId))
@@ -91,7 +125,7 @@ namespace Opc.Ua.PubSub
                     dictionary.Add(attributeId, dataValue);
                     m_store.Add(nodeId, dictionary);
                 }
-            }            
+            }
         }
 
         /// <summary>
@@ -99,8 +133,9 @@ namespace Opc.Ua.PubSub
         /// </summary>
         /// <param name="nodeId">NodeId identifier of node</param>
         /// <param name="attributeId">Default value is <see cref="Attributes.Value"/></param>
+        /// <param name="deltaFrame">TRUE if a delta frame is being created.</param>
         /// <returns></returns>
-        public DataValue ReadPublishedDataItem(NodeId nodeId, uint attributeId = Attributes.Value)
+        public DataValue ReadPublishedDataItem(NodeId nodeId, uint attributeId = Attributes.Value, bool deltaFrame = false)
         {
             if (nodeId == null)
             {
@@ -122,9 +157,16 @@ namespace Opc.Ua.PubSub
                     {
                         return m_store[nodeId][attributeId];
                     }
-                }                
+                }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Updates the metadata.
+        /// </summary>
+        public void UpdateMetaData(PublishedDataSetDataType publishedDataSet)
+        {
         }
         #endregion
     }

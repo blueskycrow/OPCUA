@@ -28,6 +28,7 @@
  * ======================================================================*/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
@@ -783,10 +784,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToBrowse == null || nodesToBrowse.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(nodesToBrowse, OperationLimits.MaxNodesPerBrowse);
 
                 m_serverInternal.NodeManager.Browse(
                     context,
@@ -843,10 +841,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (continuationPoints == null || continuationPoints.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(continuationPoints, OperationLimits.MaxNodesPerBrowse);
 
                 m_serverInternal.NodeManager.BrowseNext(
                     context,
@@ -897,10 +892,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToRegister == null || nodesToRegister.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(nodesToRegister, OperationLimits.MaxNodesPerRegisterNodes);
 
                 m_serverInternal.NodeManager.RegisterNodes(
                     context,
@@ -943,10 +935,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToUnregister == null || nodesToUnregister.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(nodesToUnregister, OperationLimits.MaxNodesPerRegisterNodes);
 
                 m_serverInternal.NodeManager.UnregisterNodes(
                     context,
@@ -997,10 +986,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (browsePaths == null || browsePaths.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(browsePaths, OperationLimits.MaxNodesPerTranslateBrowsePathsToNodeIds);
 
                 m_serverInternal.NodeManager.TranslateBrowsePathsToNodeIds(
                     context,
@@ -1054,10 +1040,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToRead == null || nodesToRead.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(nodesToRead, OperationLimits.MaxNodesPerRead);
 
                 m_serverInternal.NodeManager.Read(
                     context,
@@ -1115,9 +1098,13 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToRead == null || nodesToRead.Count == 0)
+                if (historyReadDetails?.Body is ReadEventDetails)
                 {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
+                    ValidateOperationLimits(nodesToRead, OperationLimits.MaxNodesPerHistoryReadEvents);
+                }
+                else
+                {
+                    ValidateOperationLimits(nodesToRead, OperationLimits.MaxNodesPerHistoryReadData);
                 }
 
                 m_serverInternal.NodeManager.HistoryRead(
@@ -1171,10 +1158,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (nodesToWrite == null || nodesToWrite.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(nodesToWrite, OperationLimits.MaxNodesPerWrite);
 
                 m_serverInternal.NodeManager.Write(
                     context,
@@ -1224,10 +1208,10 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (historyUpdateDetails == null || historyUpdateDetails.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                // check only for BadNothingToDo here
+                // MaxNodesPerHistoryUpdateEvents & MaxNodesPerHistoryUpdateData
+                // must be checked in NodeManager (TODO)
+                ValidateOperationLimits(historyUpdateDetails);
 
                 m_serverInternal.NodeManager.HistoryUpdate(
                     context,
@@ -1346,10 +1330,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (subscriptionIds == null || subscriptionIds.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(subscriptionIds);
 
                 ServerInternal.SubscriptionManager.DeleteSubscriptions(
                     context,
@@ -1700,10 +1681,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (subscriptionIds == null || subscriptionIds.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(subscriptionIds);
 
                 ServerInternal.SubscriptionManager.SetPublishingMode(
                     context,
@@ -1769,10 +1747,9 @@ namespace Opc.Ua.Server
 
             try
             {
-                if ((linksToAdd == null || linksToAdd.Count == 0) && (linksToRemove == null || linksToRemove.Count == 0))
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(linksToAdd, OperationLimits.MaxMonitoredItemsPerCall);
+                ValidateOperationLimits(linksToRemove, OperationLimits.MaxMonitoredItemsPerCall);
+                ValidateOperationLimits(linksToAdd.Count + linksToRemove.Count, OperationLimits.MaxMonitoredItemsPerCall);
 
                 ServerInternal.SubscriptionManager.SetTriggering(
                     context,
@@ -1831,10 +1808,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (itemsToCreate == null || itemsToCreate.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(itemsToCreate, OperationLimits.MaxMonitoredItemsPerCall);
 
                 ServerInternal.SubscriptionManager.CreateMonitoredItems(
                     context,
@@ -1890,10 +1864,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (itemsToModify == null || itemsToModify.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(itemsToModify, OperationLimits.MaxMonitoredItemsPerCall);
 
                 ServerInternal.SubscriptionManager.ModifyMonitoredItems(
                     context,
@@ -1947,10 +1918,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (monitoredItemIds == null || monitoredItemIds.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(monitoredItemIds, OperationLimits.MaxMonitoredItemsPerCall);
 
                 ServerInternal.SubscriptionManager.DeleteMonitoredItems(
                     context,
@@ -2005,10 +1973,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (monitoredItemIds == null || monitoredItemIds.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
+                ValidateOperationLimits(monitoredItemIds, OperationLimits.MaxMonitoredItemsPerCall);
 
                 ServerInternal.SubscriptionManager.SetMonitoringMode(
                     context,
@@ -2060,26 +2025,7 @@ namespace Opc.Ua.Server
 
             try
             {
-                if (methodsToCall == null || methodsToCall.Count == 0)
-                {
-                    throw new ServiceResultException(StatusCodes.BadNothingToDo);
-                }
-
-                uint maxNodesPerMethodCall = 0;
-
-                try
-                {
-                    maxNodesPerMethodCall = ServerInternal.ServerObject.ServerCapabilities.OperationLimits.MaxNodesPerMethodCall.Value;
-                }
-                catch
-                {
-                    //ignore erros
-                }
-
-                if (maxNodesPerMethodCall > 0 && methodsToCall.Count > maxNodesPerMethodCall)
-                {
-                    throw new ServiceResultException(StatusCodes.BadTooManyOperations);
-                }
+                ValidateOperationLimits(methodsToCall, OperationLimits.MaxNodesPerMethodCall);
 
                 m_serverInternal.NodeManager.Call(
                     context,
@@ -2156,7 +2102,7 @@ namespace Opc.Ua.Server
         public async Task<bool> RegisterWithDiscoveryServer()
         {
             ApplicationConfiguration configuration = string.IsNullOrEmpty(base.Configuration.SourceFilePath) ?
-                base.Configuration : await ApplicationConfiguration.Load(new FileInfo(base.Configuration.SourceFilePath), ApplicationType.Server, null, false);
+                base.Configuration : await ApplicationConfiguration.Load(new FileInfo(base.Configuration.SourceFilePath), ApplicationType.Server, null, false).ConfigureAwait(false);
             CertificateValidationEventHandler registrationCertificateValidator = new CertificateValidationEventHandler(RegistrationValidator_CertificateValidation);
             configuration.CertificateValidator.CertificateValidation += registrationCertificateValidator;
 
@@ -2310,7 +2256,7 @@ namespace Opc.Ua.Server
                     }
                 }
 
-                if (await RegisterWithDiscoveryServer())
+                if (await RegisterWithDiscoveryServer().ConfigureAwait(false))
                 {
                     // schedule next registration.                        
                     lock (m_registrationLock)
@@ -2490,6 +2436,37 @@ namespace Opc.Ua.Server
         }
 
         /// <summary>
+        /// Validate operation limits.
+        /// </summary>
+        /// <param name="operation">A list of operations.</param>
+        /// <param name="operationLimit">The operation limit property.</param>
+        /// <exception cref="ServiceResultException">BadNothingToDo if list is null or empty.</exception>
+        /// <exception cref="ServiceResultException">BadTooManyOperations if list is larger than operation limit property.</exception>
+        protected void ValidateOperationLimits(IList operation, PropertyState<uint> operationLimit = null)
+        {
+            if (operation == null || operation.Count == 0)
+            {
+                throw new ServiceResultException(StatusCodes.BadNothingToDo);
+            }
+            ValidateOperationLimits(operation.Count, operationLimit);
+        }
+
+        /// <summary>
+        /// Validate operation limits.
+        /// </summary>
+        /// <param name="count">A count of operations.</param>
+        /// <param name="operationLimit">The operation limit property.</param>
+        /// <exception cref="ServiceResultException">BadTooManyOperations if count is larger than operation limit property.</exception>
+        protected void ValidateOperationLimits(int count, PropertyState<uint> operationLimit)
+        {
+            uint operationLimitValue = (operationLimit != null) ? operationLimit.Value : 0;
+            if (operationLimitValue > 0 && count > operationLimitValue)
+            {
+                throw new ServiceResultException(StatusCodes.BadTooManyOperations);
+            }
+        }
+
+        /// <summary>
         /// Translates an exception.
         /// </summary>
         /// <param name="context">The context.</param>
@@ -2600,7 +2577,7 @@ namespace Opc.Ua.Server
                 ApplicationConfiguration configuration = await ApplicationConfiguration.Load(
                     new FileInfo(args.FilePath),
                     Configuration.ApplicationType,
-                    Configuration.GetType());
+                    Configuration.GetType()).ConfigureAwait(false);
 
                 OnUpdateConfiguration(configuration);
             }
@@ -2665,20 +2642,22 @@ namespace Opc.Ua.Server
         /// Creates the endpoints and creates the hosts.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+        /// <param name="bindingFactory">The transport listener binding factory.</param>
         /// <param name="serverDescription">The server description.</param>
         /// <param name="endpoints">The endpoints.</param>
         /// <returns>
         /// Returns IList of a host for a UA service.
         /// </returns>
-        protected override IList<Task> InitializeServiceHosts(
+        protected override IList<ServiceHost> InitializeServiceHosts(
             ApplicationConfiguration configuration,
+            TransportListenerBindings bindingFactory,
             out ApplicationDescription serverDescription,
             out EndpointDescriptionCollection endpoints)
         {
             serverDescription = null;
             endpoints = null;
 
-            Dictionary<string, Task> hosts = new Dictionary<string, Task>();
+            var hosts = new Dictionary<string, ServiceHost>();
 
             // ensure at least one security policy exists.
             if (configuration.ServerConfiguration.SecurityPolicies.Count == 0)
@@ -2711,7 +2690,7 @@ namespace Opc.Ua.Server
 
             foreach (var scheme in Utils.DefaultUriSchemes)
             {
-                var binding = TransportBindings.Listeners.GetBinding(scheme);
+                var binding = bindingFactory.GetBinding(scheme);
                 if (binding != null)
                 {
                     endpointsForHost = binding.CreateServiceHost(
@@ -2728,7 +2707,15 @@ namespace Opc.Ua.Server
                 }
             }
 
-            return new List<Task>(hosts.Values);
+            return new List<ServiceHost>(hosts.Values);
+        }
+
+        /// <summary>
+        /// Creates an instance of the service host.
+        /// </summary>
+        public override ServiceHost CreateServiceHost(ServerBase server, params Uri[] addresses)
+        {
+            return new ServiceHost(this, typeof(SessionEndpoint), addresses);
         }
 
         /// <summary>
@@ -2834,7 +2821,7 @@ namespace Opc.Ua.Server
                         {
                             UriBuilder uri = new UriBuilder(BaseAddresses[ii].DiscoveryUrl);
 
-                            if (String.Compare(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) == 0)
+                            if (String.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
                             {
                                 uri.Host = computerName;
                             }
@@ -3140,6 +3127,10 @@ namespace Opc.Ua.Server
         {
             // may be overridden by the subclass.
         }
+        #endregion
+
+        #region Private Properties
+        private OperationLimitsState OperationLimits => ServerInternal.ServerObject.ServerCapabilities.OperationLimits;
         #endregion
 
         #region Private Fields

@@ -1,5 +1,5 @@
 /* ========================================================================
- * Copyright (c) 2005-2020 The OPC Foundation, Inc. All rights reserved.
+ * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
  * 
@@ -60,6 +60,11 @@ namespace Opc.Ua.PubSub.PublishedData
         /// Gets SequenceNumber - a strictly monotonically increasing sequence number assigned by the publisher to each DataSetMessage sent.
         /// </summary>
         public uint SequenceNumber { get; internal set; }
+
+        /// <summary>
+        /// Gets DataSetMetaData for this DataSet
+        /// </summary>
+        public DataSetMetaDataType DataSetMetaData { get; set; }
 
         /// <summary>
         /// Get/Set data set fields for this data set
